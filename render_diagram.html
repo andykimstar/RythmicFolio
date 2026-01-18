@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Stack Diagram</title>
+    <!-- Include Mermaid -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.8.0/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .mermaid {
+            background-color: #0d1117;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mermaid">
+        graph TD
+        subgraph Frontend [Frontend Layer]
+        HTML[HTML5 Structure]
+        CSS[CSS3 Dark Mode]
+        JS[JavaScript ES6+]
+        ChartJS[Chart.js Library]
+
+        HTML --> CSS
+        HTML --> JS
+        JS --> ChartJS
+        end
+
+        subgraph Backend [Backend Layer]
+        Flask[Flask Web Server]
+        CORS[Flask-CORS]
+        PyService[StockDataService Class]
+
+        Flask --> CORS
+        Flask --> PyService
+        end
+
+        subgraph Data [Data Layer]
+        YF[yfinance Library]
+        Yahoo[Yahoo Finance API]
+
+        PyService --> YF
+        YF --> Yahoo
+        end
+
+        %% Communication
+        JS -- "HTTP GET /api/history" --> Flask
+        Flask -- "JSON Response" --> JS
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Portfolio | Trading Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 13.2L7.2 9L11.4 13.2L16.2 8.4V11.4H18.6V4.2H11.4V6.6H14.4L11.4 9.6L7.2 5.4L0.6 12H3V13.2ZM21 16.2H23.4V21H21V16.2ZM17.4 18.6H19.8V21H17.4V18.6ZM13.8 19.8H16.2V21H13.8V19.8ZM21 0H3C1.34315 0 0 1.34315 0 3V21C0 22.6569 1.34315 24 3 24H21C22.6569 24 24 22.6569 24 21V3C24 1.34315 22.6569 0 21 0Z" fill="var(--primary-color)"/>
+                </svg>
+                <span>Trade<span class="highlight">Flow</span></span>
+            </div>
+            
+            <nav>
+                <a href="#" class="nav-item active">
+                    <span class="icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📈</span>
+                    Markets
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">💼</span>
+                    Portfolio
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📰</span>
+                    News
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    Settings
+                </a>
+            </nav>
+
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Alex+Trader&background=random" alt="Profile" class="avatar">
+                <div class="user-info">
+                    <p class="name">Alex Trader</p>
+                    <p class="status">Pro Account</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search symbols, stocks, news...">
+                </div>
+                <div class="header-actions">
+                    <button class="action-btn notification-btn">🔔<span class="badge">3</span></button>
+                    <button class="btn btn-primary">+ Deposit</button>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <!-- Welcome & Date -->
+                <div class="page-header">
+                    <div>
+                        <h1>Portfolio Overview</h1>
+                        <p class="current-date">October 24, 2025 • Market Open</p>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <section class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3>Net Worth</h3>
+                            <span class="trend up">+2.4%</span>
+                        </div>
+                        <div class="stat-value">$124,592.50</div>
+                        <div class="stat-sub">+$2,940.32 today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3>Day Change</h3>
+                            <span class="trend up">+1.8%</span>
+                        </div>
+                        <div class="stat-value text-success">+$1,842.10</div>
+                        <div class="stat-sub">Realized Gain</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3>Buying Power</h3>
+                        </div>
+                        <div class="stat-value">$14,250.00</div>
+                        <div class="stat-sub">Cash Balance</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3>Total Return</h3>
+                            <span class="trend down">-0.5%</span>
+                        </div>
+                        <div class="stat-value text-danger">-$420.50</div>
+                        <div class="stat-sub">All time</div>
+                    </div>
+                </section>
+
+                <!-- Main Layout Grid -->
+                <div class="content-grid">
+                    <!-- Portfolio Table Section -->
+                    <section class="glass-panel portfolio-section">
+                        <div class="panel-header">
+                            <h2>Your Holdings</h2>
+                            <button class="btn btn-sm btn-outline">View All</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Name</th>
+                                        <th class="text-right">Price</th>
+                                        <th class="text-right">Change</th>
+                                        <th class="text-right">Value</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <div class="logo-box apple"></div>
+                                                <div>
+                                                    <span class="ticker">AAPL</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="company-name">Apple Inc.</td>
+                                        <td class="text-right">$178.35</td>
+                                        <td class="text-right text-success">+1.25%</td>
+                                        <td class="text-right">$24,590.00</td>
+                                        <td class="text-center"><button class="btn-icon">⋯</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <div class="logo-box tesla">T</div>
+                                                <div>
+                                                    <span class="ticker">TSLA</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="company-name">Tesla, Inc.</td>
+                                        <td class="text-right">$245.60</td>
+                                        <td class="text-right text-danger">-2.10%</td>
+                                        <td class="text-right">$15,200.50</td>
+                                        <td class="text-center"><button class="btn-icon">⋯</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <div class="logo-box nvidia">N</div>
+                                                <div>
+                                                    <span class="ticker">NVDA</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="company-name">NVIDIA Corp</td>
+                                        <td class="text-right">$450.12</td>
+                                        <td class="text-right text-success">+3.45%</td>
+                                        <td class="text-right">$38,100.00</td>
+                                        <td class="text-center"><button class="btn-icon">⋯</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <div class="logo-box amazon">a</div>
+                                                <div>
+                                                    <span class="ticker">AMZN</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="company-name">Amazon.com</td>
+                                        <td class="text-right">$135.20</td>
+                                        <td class="text-right text-success">+0.85%</td>
+                                        <td class="text-right">$12,450.00</td>
+                                        <td class="text-center"><button class="btn-icon">⋯</button></td>
+                                    </tr>
+                                     <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <div class="logo-box google">G</div>
+                                                <div>
+                                                    <span class="ticker">GOOGL</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="company-name">Alphabet Inc.</td>
+                                        <td class="text-right">$130.45</td>
+                                        <td class="text-right text-muted">0.00%</td>
+                                        <td class="text-right">$18,220.00</td>
+                                        <td class="text-center"><button class="btn-icon">⋯</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Watchlist / Mini Charts Section -->
+                    <aside class="side-panel">
+                        <section class="glass-panel watchlist-section">
+                            <div class="panel-header">
+                                <h2>Watchlist</h2>
+                                <button class="btn-icon">+</button>
+                            </div>
+                            <div class="watchlist-items">
+                                <div class="watchlist-item">
+                                    <div class=" wl-info">
+                                        <span class="wl-ticker">MSFT</span>
+                                        <span class="wl-name">Microsoft</span>
+                                    </div>
+                                    <div class="wl-chart up">
+                                        <!-- Simple SVG Sparkline -->
+                                        <svg width="60" height="20" viewBox="0 0 60 20">
+                                            <path d="M0,15 L10,12 L20,16 L30,10 L40,5 L50,8 L60,2" fill="none" stroke="#2EA043" stroke-width="2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="wl-price text-success">
+                                        $320.50<br>
+                                        <small>+1.2%</small>
+                                    </div>
+                                </div>
+                                <div class="watchlist-item">
+                                    <div class="wl-info">
+                                        <span class="wl-ticker">NFLX</span>
+                                        <span class="wl-name">Netflix</span>
+                                    </div>
+                                    <div class="wl-chart down">
+                                         <svg width="60" height="20" viewBox="0 0 60 20">
+                                            <path d="M0,5 L10,8 L20,4 L30,12 L40,15 L50,14 L60,18" fill="none" stroke="#DA3633" stroke-width="2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="wl-price text-danger">
+                                        $440.10<br>
+                                        <small>-0.8%</small>
+                                    </div>
+                                </div>
+                                <div class="watchlist-item">
+                                    <div class="wl-info">
+                                        <span class="wl-ticker">META</span>
+                                        <span class="wl-name">Meta</span>
+                                    </div>
+                                    <div class="wl-chart up">
+                                        <svg width="60" height="20" viewBox="0 0 60 20">
+                                            <path d="M0,18 L10,14 L20,15 L30,8 L40,10 L50,5 L60,1" fill="none" stroke="#2EA043" stroke-width="2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="wl-price text-success">
+                                        $298.00<br>
+                                        <small>+2.1%</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <!-- Simple visual ad/promo or news block -->
+                        <section class="glass-panel news-block">
+                            <h3>Market News</h3>
+                            <div class="news-item">
+                                <span class="news-tag">Tech</span>
+                                <p>AI Rally continues as major tech firms report earnings.</p>
+                                <small>2h ago</small>
+                            </div>
+                            <div class="news-item">
+                                <span class="news-tag">Fed</span>
+                                <p>Interest rates expected to hold steady this quarter.</p>
+                                <small>4h ago</small>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
