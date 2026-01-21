@@ -1,3 +1,4 @@
+import pandas as pd
 import yfinance as yf
 import json
 from datetime import datetime
@@ -18,6 +19,158 @@ class StockDataService:
             return val
         except:
             return default
+
+    def _get_financial_data(self, ticker, statement_type="income", freq="q"):
+        """
+        Fetch and transpose financial statements.
+        statement_type: "income", "cash", or "balance"
+        freq: "a" (annual) or "q" (quarterly)
+        """
+        try:
+            mapping = {
+                "income":  ticker.income_stmt if freq == 'a' else ticker.quarterly_income_stmt,
+                "cash":    ticker.cashflow if freq == 'a' else ticker.quarterly_cashflow,
+                "balance": ticker.balance_sheet if freq == 'a' else ticker.quarterly_balance_sheet
+            }
+            df = mapping.get(statement_type)
+            # Transpose so index is dates
+            return df.T.sort_index() if df is not None and not df.empty else pd.DataFrame()
+        except:
+            return pd.DataFrame()
+
+    def _calc_growth(self, df, col_name, period_offset):
+        """
+        Calculate percentage growth.
+        """
+        try:
+            if col_name not in df.columns:
+                return "-"
+            
+            # Ensure we have date index sorted ascending
+            series = df[col_name].dropna()
+            
+            if len(series) <= period_offset:
+                return "-"
+            
+            curr = series.iloc[-1]
+            prev = series.iloc[-(period_offset + 1)]
+            
+            if prev == 0 or prev is None or curr is None: 
+                return "-"
+            
+            growth = ((curr - prev) / abs(prev)) * 100
+            return round(growth, 2)
+        except:
+            return "-"
+
+    def _get_dates(self, df, period_offset):
+        """Helper to get the actual dates being compared."""
+        try:
+            if df.empty or len(df) <= period_offset:
+                return None, None
+            
+            curr_date = df.index[-1].strftime('%Y-%m-%d')
+            prev_date = df.index[-(period_offset + 1)].strftime('%Y-%m-%d')
+            return curr_date, prev_date
+        except:
+            return None, None
+
+    def get_statistics(self, symbol):
+        """
+        Fetch financial statistics (Growth metrics) for the UI.
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            if not ticker:
+                return None
+
+            # Fetch all needed dataframes
+            q_income = self._get_financial_data(ticker, "income", "q")
+            q_cash   = self._get_financial_data(ticker, "cash", "q")
+            q_balance= self._get_financial_data(ticker, "balance", "q")
+            
+            a_income = self._get_financial_data(ticker, "income", "a")
+            a_cash   = self._get_financial_data(ticker, "cash", "a")
+            a_balance= self._get_financial_data(ticker, "balance", "a")
+
+            # Mappings for yfinance fields
+            # Note: Field names might vary by yfinance version/source. Using standard ones.
+            # Revenue: "Total Revenue"
+            # Net Income: "Net Income"
+            # Expenses: "Total Expenses"
+            # EBITDA: "EBITDA"
+            # FCF: "Free Cash Flow"
+            # Shares: "Ordinary Shares Number"
+
+            # Offsets
+            q_offset = 4 # Q vs Q-4 (YoY)
+            a_offset = 1 # A vs A-1 (YoY)
+
+            # Get Dates for validation
+            q_curr_date, q_prev_date = self._get_dates(q_income, q_offset)
+            a_curr_date, a_prev_date = self._get_dates(a_income, a_offset)
+            
+            # Print to console for server-side verification
+            print(f"[{symbol}] Stats Calculation Dates:")
+            print(f"  Annual:    {a_curr_date} vs {a_prev_date}")
+            print(f"  Quarterly: {q_curr_date} vs {q_prev_date}")
+
+            def get_chart_data(df, col):
+                if df.empty or col not in df.columns:
+                    return []
+                # Return last 8 periods for charts
+                series = df[col].dropna().tail(8)
+                return [{"date": str(d.date()), "value": v} for d, v in series.items()]
+
+            return {
+                # Metadata
+                "meta_annual_dates": f"{a_curr_date} vs {a_prev_date}",
+                "meta_quarterly_dates": f"{q_curr_date} vs {q_prev_date}",
+
+                # Charts Data
+                "charts": {
+                    "quarterly": {
+                        "Revenue": get_chart_data(q_income, "Total Revenue"),
+                        "NetIncome": get_chart_data(q_income, "Net Income"),
+                        "Expenses": get_chart_data(q_income, "Total Expenses"),
+                        "FreeCashFlow": get_chart_data(q_cash, "Free Cash Flow"),
+                        "ShareOutstanding": get_chart_data(q_balance, "Ordinary Shares Number"),
+                        "ROIC": []
+                    },
+                    "annual": {
+                        "Revenue": get_chart_data(a_income, "Total Revenue"),
+                        "NetIncome": get_chart_data(a_income, "Net Income"),
+                        "Expenses": get_chart_data(a_income, "Total Expenses"),
+                        "FreeCashFlow": get_chart_data(a_cash, "Free Cash Flow"),
+                        "ShareOutstanding": get_chart_data(a_balance, "Ordinary Shares Number"),
+                        "ROIC": []
+                    }
+                },
+
+                # Quarterly YoY
+                "QYoY_Revenue_Growth": self._calc_growth(q_income, "Total Revenue", q_offset),
+                "QYoY_NetIncome_Growth": self._calc_growth(q_income, "Net Income", q_offset),
+                "QYoY_Expense_Growth": self._calc_growth(q_income, "Total Expenses", q_offset),
+                "QYoY_EBITDA_Growth": self._calc_growth(q_income, "EBITDA", q_offset),
+                "QYoY_FreeCashFlow_Growth": self._calc_growth(q_cash, "Free Cash Flow", q_offset),
+                "QYoY_OrdinarySharesNumber_Growth": self._calc_growth(q_balance, "Ordinary Shares Number", q_offset),
+                
+                # Annual YoY
+                "AYoY_Revenue_Growth": self._calc_growth(a_income, "Total Revenue", a_offset),
+                "AYoY_NetIncome_Growth": self._calc_growth(a_income, "Net Income", a_offset),
+                "AYoY_Expense_Growth": self._calc_growth(a_income, "Total Expenses", a_offset),
+                "AYoY_EBITDA_Growth": self._calc_growth(a_income, "EBITDA", a_offset),
+                "AYoY_FreeCashFlow_Growth": self._calc_growth(a_cash, "Free Cash Flow", a_offset),
+                "AYoY_OrdinarySharesNumber_Growth": self._calc_growth(a_balance, "Ordinary Shares Number", a_offset),
+                
+                # Use EBITDA growth as proxy for ROIC/check specific fields if needed
+                "QYoY_ROIC_Growth": "-", 
+                "AYoY_ROIC_Growth": "-"
+            }
+
+        except Exception as e:
+            print(f"Error in get_statistics: {e}")
+            return None
 
     def get_stock_quote(self, symbol, timeinterval="1d"):
         """
@@ -126,6 +279,8 @@ class StockDataService:
         except Exception as e:
             print(f"Error fetching historical data for {symbol}: {e}")
             return []
+
+
 
     def get_portfolio_snapshot(self, symbols):
         """

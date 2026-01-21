@@ -209,9 +209,9 @@
             text-align: left;
         }
 
-        /* Statistics Section */
-        .statistics-section {
-            margin-top: 40px;
+        /* Financial Section */
+        .financial-section {
+            margin-top: 80px;
             margin-bottom: 40px;
         }
 
@@ -377,13 +377,15 @@
             </div>
         </div>
 
-        <!-- Statistics Section (UI Only) -->
-        <div class="statistics-section">
-            <h2 class="section-title">Statistics</h2>
+        <!-- Financial Section (UI Only) -->
+        <div class="financial-section">
+            <h2 class="section-title">Financials</h2>
             <div class="toggle-headers">
                 <span class="toggle-item active">Quarterly YoY</span>
                 <span class="toggle-item">Annual YoY</span>
             </div>
+            <div class="comparison-dates" id="comparisonDates"
+                style="color: #6b7280; font-size: 0.9rem; margin-bottom: 15px;"></div>
 
             <div class="growth-grid">
                 <!-- Row 1 -->
@@ -414,10 +416,88 @@
                     <span class="growth-value text-red">-10.21%</span>
                 </div>
             </div>
+
+            <!-- Financial Charts Grid -->
+            <div class="financial-charts-grid"
+                style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="chart-card" onclick="openChartModal('Revenue')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Revenue</h3>
+                    <div style="height: 200px;"><canvas id="chartRevenue"></canvas></div>
+                </div>
+                <div class="chart-card" onclick="openChartModal('NetIncome')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Net Income</h3>
+                    <div style="height: 200px;"><canvas id="chartNetIncome"></canvas></div>
+                </div>
+                <div class="chart-card" onclick="openChartModal('FreeCashFlow')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Free Cash Flow</h3>
+                    <div style="height: 200px;"><canvas id="chartFreeCashFlow"></canvas></div>
+                </div>
+                <div class="chart-card" onclick="openChartModal('Expenses')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Expenses</h3>
+                    <div style="height: 200px;"><canvas id="chartExpenses"></canvas></div>
+                </div>
+                <div class="chart-card" onclick="openChartModal('ShareOutstanding')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Shares Outstanding</h3>
+                    <div style="height: 200px;"><canvas id="chartShareOutstanding"></canvas></div>
+                </div>
+                <div class="chart-card" onclick="openChartModal('ROIC')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">ROIC</h3>
+                    <div style="height: 200px;"><canvas id="chartROIC"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Screen Chart Modal -->
+        <div id="chartModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+            <div
+                style="background: #161b29; padding: 30px; border-radius: 12px; width: 85%; height: 85%; position: relative; display: flex; flex-direction: column;">
+
+                <!-- Navigation Arrows -->
+                <div onclick="navigateModalChart(-1)"
+                    style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 3rem; cursor: pointer; z-index: 10; padding: 10px; user-select: none;">
+                    &#10094;</div>
+                <div onclick="navigateModalChart(1)"
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 3rem; cursor: pointer; z-index: 10; padding: 10px; user-select: none;">
+                    &#10095;</div>
+
+                <!-- Modal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <h2 id="modalTitle" style="color: #fff; margin: 0; font-size: 1.8rem; font-weight: 400;">Revenue
+                        </h2>
+                        <h3 id="modalGrowthValue" style="color: #00E396; margin: 0; font-size: 1.5rem;">+7.94%</h3>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 40px;"> <!-- Increased gap -->
+                        <!-- Modal Toggles -->
+                        <div style="display: flex; background: #374151; padding: 4px; border-radius: 6px;">
+                            <button id="modalToggleQ" class="modal-toggle active" onclick="switchModalPeriod('q')"
+                                style="background: #4b5563; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 1rem;">Quarterly</button>
+                            <!-- Larger padding/font -->
+                            <button id="modalToggleA" class="modal-toggle" onclick="switchModalPeriod('a')"
+                                style="background: transparent; color: #9ca3af; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 1rem;">Annual</button>
+                        </div>
+
+                        <button onclick="closeChartModal()"
+                            style="background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer;">✕</button>
+                    </div>
+                </div>
+
+                <div style="flex: 1; width: 100%; position: relative;">
+                    <canvas id="modalChartCanvas"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
 </body>
 
 </html>

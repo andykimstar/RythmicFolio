@@ -30,6 +30,16 @@ def get_history(symbol):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/statistics/<symbol>', methods=['GET'])
+def get_statistics(symbol):
+    try:
+        data = stock_service.get_statistics(symbol)
+        if data:
+            return jsonify(data)
+        return jsonify({"error": "No statistics found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     print("Starting Flask server on http://localhost:5000")
     app.run(debug=True, port=5000)
