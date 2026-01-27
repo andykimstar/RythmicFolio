@@ -41,6 +41,10 @@ function handleSearch() {
     }
 }
 
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : 'https://YOUR_BACKEND_URL_HERE'; // TODO: Replace with your actual deployed backend URL after deployment
+
 async function fetchStockData(symbol, period = '1d') {
     if (!symbol) return;
     const symbolClean = symbol.toUpperCase();
@@ -52,9 +56,9 @@ async function fetchStockData(symbol, period = '1d') {
     try {
         // Parallel requests: Quote, History, and Statistics
         const [quoteRes, historyRes, statsRes] = await Promise.all([
-            fetch(`http://localhost:5000/api/quote/${symbolClean}`),
-            fetch(`http://localhost:5000/api/history/${symbolClean}?period=${period}`),
-            fetch(`http://localhost:5000/api/statistics/${symbolClean}`)
+            fetch(`${API_BASE_URL}/api/quote/${symbolClean}`),
+            fetch(`${API_BASE_URL}/api/history/${symbolClean}?period=${period}`),
+            fetch(`${API_BASE_URL}/api/statistics/${symbolClean}`)
         ]);
 
         if (quoteRes.ok) {
@@ -147,7 +151,7 @@ function renderFinancials(mode) {
         'Free Cash Flow Growth': 'FreeCashFlow_Growth',
         'Expense Growth': 'Expense_Growth',
         'Net Income Growth': 'NetIncome_Growth',
-        'ROIC Growth': 'ROIC_Growth', // or EBITDA proxy
+        'Operating Margin Growth': 'OperatingMargin_Growth', // or EBITDA proxy
         'Share Outstanding Growth': 'OrdinarySharesNumber_Growth'
     };
 
@@ -180,7 +184,7 @@ function renderFinancials(mode) {
     renderMetricChart('FreeCashFlow', d, mode);
     renderMetricChart('Expenses', d, mode);
     renderMetricChart('ShareOutstanding', d, mode);
-    renderMetricChart('ROIC', d, mode);
+    renderMetricChart('OperatingMargin', d, mode);
 }
 
 function renderMetricChart(metric, data, mode) {
@@ -209,7 +213,7 @@ function renderMetricChart(metric, data, mode) {
         const container = canvas.parentElement;
         if (container && container.previousElementSibling) {
             let titleText = `${metric.replace(/([A-Z])/g, ' $1').trim()} (${mode === 'q' ? 'Quarterly' : 'Annual'})`;
-            if (metric === 'ROIC') titleText = 'ROIC';
+            if (metric === 'OperatingMargin') titleText = 'OperatingMargin';
             container.previousElementSibling.innerText = titleText;
         }
         return;
@@ -230,7 +234,7 @@ function renderMetricChart(metric, data, mode) {
         'FreeCashFlow': 'rgba(255, 159, 64, 0.6)',  // Orange
         'Expenses': 'rgba(255, 205, 86, 0.6)',      // Yellow
         'ShareOutstanding': 'rgba(75, 192, 192, 0.6)', // Teal
-        'ROIC': 'rgba(201, 203, 207, 0.6)'          // Grey
+        'OperatingMargin': 'rgba(201, 203, 207, 0.6)'          // Grey
     };
     const color = metricColors[metric] || '#5c9ea6';
 
@@ -261,6 +265,7 @@ function renderMetricChart(metric, data, mode) {
                         label: function (context) {
                             // Format large numbers
                             let val = context.raw;
+                            if (metric === 'OperatingMargin') return val.toFixed(2) + '%';
                             return formatNetworkNumber(val);
                         }
                     }
@@ -281,7 +286,7 @@ function renderMetricChart(metric, data, mode) {
     const container = ctx.parentElement;
     if (container && container.previousElementSibling) {
         let titleText = `${metric.replace(/([A-Z])/g, ' $1').trim()} (${mode === 'q' ? 'Quarterly' : 'Annual'})`;
-        if (metric === 'ROIC') titleText = 'ROIC';
+        if (metric === 'OperatingMargin') titleText = 'OperatingMargin';
         container.previousElementSibling.innerText = titleText;
     }
 }
@@ -306,7 +311,7 @@ function closeChartModal() {
     document.getElementById('chartModal').style.display = 'none';
 }
 
-const metricOrder = ['Revenue', 'NetIncome', 'FreeCashFlow', 'Expenses', 'ShareOutstanding', 'ROIC'];
+const metricOrder = ['Revenue', 'NetIncome', 'FreeCashFlow', 'Expenses', 'OperatingMargin', 'ShareOutstanding'];
 
 function navigateModalChart(direction) {
     if (!currentModalMetric) return;
@@ -359,7 +364,7 @@ function updateModalUI() {
         'FreeCashFlow': 'FreeCashFlow_Growth',
         'Expenses': 'Expense_Growth',
         'ShareOutstanding': 'OrdinarySharesNumber_Growth',
-        'ROIC': 'ROIC_Growth'
+        'OperatingMargin': 'OperatingMargin_Growth'
     };
     const prefix = mode === 'q' ? 'QYoY_' : 'AYoY_';
     const key = prefix + map[metric];
@@ -536,7 +541,7 @@ function renderModalChart(data, metric) {
                         'FreeCashFlow': 'rgba(255, 159, 64, 0.6)',
                         'Expenses': 'rgba(255, 205, 86, 0.6)',
                         'ShareOutstanding': 'rgba(75, 192, 192, 0.6)',
-                        'ROIC': 'rgba(201, 203, 207, 0.6)'
+                        'OperatingMargin': 'rgba(201, 203, 207, 0.6)'
                     };
                     return metricColors[metric] || '#4e36cc';
                 })(),
@@ -554,7 +559,7 @@ function renderModalChart(data, metric) {
                     backgroundColor: '#1e2433',
                     titleColor: '#fff',
                     callbacks: {
-                        label: (c) => formatNetworkNumber(c.raw)
+                        label: (c) => metric === 'OperatingMargin' ? c.raw.toFixed(2) + '%' : formatNetworkNumber(c.raw)
                     }
                 }
             },
@@ -568,7 +573,7 @@ function renderModalChart(data, metric) {
                     grid: { display: true, color: '#2a2f3e' },
                     ticks: {
                         color: '#9ca3af',
-                        callback: (val) => formatNetworkNumber(val),
+                        callback: (val) => metric === 'OperatingMargin' ? val + '%' : formatNetworkNumber(val),
                         maxTicksLimit: 6
                     }
                 }

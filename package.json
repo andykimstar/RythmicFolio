@@ -1,0 +1,23 @@
+{
+  "name": "Stock_Portfolio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andykimstar/RythmicFolio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andykimstar/RythmicFolio/issues"
+  },
+  "homepage": "https://github.com/andykimstar/RythmicFolio#readme",
+  "dependencies": {
+    "firebase-tools": "^15.4.0"
+  }
+}

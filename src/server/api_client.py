@@ -122,6 +122,22 @@ class StockDataService:
                 series = df[col].dropna().tail(8)
                 return [{"date": str(d.date()), "value": v} for d, v in series.items()]
 
+            # Helper for Margin (EBIT / Revenue)
+            def get_margin_data(df):
+                try:
+                    s = (df["EBIT"] / df["Total Revenue"]) * 100
+                    return [{"date": str(d.date()), "value": v} for d, v in s.dropna().tail(8).items()]
+                except: return []
+
+            def get_margin_growth(df, offset):
+                try:
+                    s = df["EBIT"] / df["Total Revenue"]
+                    if s.empty or len(s) <= offset: return "-"
+                    curr = s.iloc[-1]; prev = s.iloc[-(offset+1)]
+                    if not prev: return "-"
+                    return round(((curr - prev) / abs(prev)) * 100, 2)
+                except: return "-"
+
             return {
                 # Metadata
                 "meta_annual_dates": f"{a_curr_date} vs {a_prev_date}",
@@ -135,7 +151,7 @@ class StockDataService:
                         "Expenses": get_chart_data(q_income, "Total Expenses"),
                         "FreeCashFlow": get_chart_data(q_cash, "Free Cash Flow"),
                         "ShareOutstanding": get_chart_data(q_balance, "Ordinary Shares Number"),
-                        "ROIC": []
+                        "OperatingMargin": get_margin_data(q_income)
                     },
                     "annual": {
                         "Revenue": get_chart_data(a_income, "Total Revenue"),
@@ -143,7 +159,7 @@ class StockDataService:
                         "Expenses": get_chart_data(a_income, "Total Expenses"),
                         "FreeCashFlow": get_chart_data(a_cash, "Free Cash Flow"),
                         "ShareOutstanding": get_chart_data(a_balance, "Ordinary Shares Number"),
-                        "ROIC": []
+                        "OperatingMargin": get_margin_data(a_income)
                     }
                 },
 
@@ -154,6 +170,7 @@ class StockDataService:
                 "QYoY_EBITDA_Growth": self._calc_growth(q_income, "EBITDA", q_offset),
                 "QYoY_FreeCashFlow_Growth": self._calc_growth(q_cash, "Free Cash Flow", q_offset),
                 "QYoY_OrdinarySharesNumber_Growth": self._calc_growth(q_balance, "Ordinary Shares Number", q_offset),
+                "QYoY_OperatingMargin_Growth": get_margin_growth(q_income, q_offset),
                 
                 # Annual YoY
                 "AYoY_Revenue_Growth": self._calc_growth(a_income, "Total Revenue", a_offset),
@@ -162,10 +179,7 @@ class StockDataService:
                 "AYoY_EBITDA_Growth": self._calc_growth(a_income, "EBITDA", a_offset),
                 "AYoY_FreeCashFlow_Growth": self._calc_growth(a_cash, "Free Cash Flow", a_offset),
                 "AYoY_OrdinarySharesNumber_Growth": self._calc_growth(a_balance, "Ordinary Shares Number", a_offset),
-                
-                # Use EBITDA growth as proxy for ROIC/check specific fields if needed
-                "QYoY_ROIC_Growth": "-", 
-                "AYoY_ROIC_Growth": "-"
+                "AYoY_OperatingMargin_Growth": get_margin_growth(a_income, a_offset)
             }
 
         except Exception as e:

@@ -109,10 +109,8 @@
         .price-change {
             font-size: 1.2rem;
             color: var(--accent-green);
-            min-width: 180px;
-            /* Prevents shifting */
-            text-align: left;
-            /* Keeps distance from price constant */
+            /* min-width removed to pull price closer */
+            text-align: right;
             font-weight: 500;
         }
 
@@ -408,7 +406,7 @@
                     <span class="growth-value text-green">2.47%</span>
                 </div>
                 <div class="growth-item">
-                    <span class="growth-label">ROIC Growth</span>
+                    <span class="growth-label">Operating Margin Growth</span>
                     <span class="growth-value text-green">0.71%</span>
                 </div>
                 <div class="growth-item">
@@ -440,15 +438,15 @@
                     <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Expenses</h3>
                     <div style="height: 200px;"><canvas id="chartExpenses"></canvas></div>
                 </div>
+                <div class="chart-card" onclick="openChartModal('OperatingMargin')"
+                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Operating Margin</h3>
+                    <div style="height: 200px;"><canvas id="chartOperatingMargin"></canvas></div>
+                </div>
                 <div class="chart-card" onclick="openChartModal('ShareOutstanding')"
                     style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
                     <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">Shares Outstanding</h3>
                     <div style="height: 200px;"><canvas id="chartShareOutstanding"></canvas></div>
-                </div>
-                <div class="chart-card" onclick="openChartModal('ROIC')"
-                    style="background: #1e2433; padding: 15px; border-radius: 8px; cursor: pointer; height: 250px;">
-                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1rem;">ROIC</h3>
-                    <div style="height: 200px;"><canvas id="chartROIC"></canvas></div>
                 </div>
             </div>
         </div>
@@ -469,10 +467,11 @@
 
                 <!-- Modal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="display: flex; align-items: baseline; gap: 10px;">
+                        <!-- align-baseline also good for text -->
                         <h2 id="modalTitle" style="color: #fff; margin: 0; font-size: 1.8rem; font-weight: 400;">Revenue
                         </h2>
-                        <h3 id="modalGrowthValue" style="color: #00E396; margin: 0; font-size: 1.5rem;">+7.94%</h3>
+                        <h3 id="modalGrowthValue" style="color: #00E396; margin: 0; font-size: 1rem;">+7.94%</h3>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 40px;"> <!-- Increased gap -->
