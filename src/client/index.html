@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RythmicFolio | Stock Analysis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6Ldn2VwsAAAAAHtsrNTaXws8T2xY67d5JgwPbrMu"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -35,12 +36,20 @@
             padding: 40px;
         }
 
-        /* Navbar */
+        /* Header Navigation */
         .navbar {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            /* Align to top so menu can drop down in its column */
             margin-bottom: 3rem;
+            position: relative;
+        }
+
+        /* Wrapper for Brand + Menu so they act as one hover target */
+        .nav-left-group {
+            display: flex;
+            flex-direction: column;
         }
 
         .brand {
@@ -48,20 +57,76 @@
             font-weight: 500;
             color: #d1d5db;
             /* Light gray text */
+            position: relative;
+            cursor: default;
+        }
+
+        /* Hover trigger area slightly larger to prevent flickering */
+        .brand-trigger {
+            padding-bottom: 20px;
+            /* Connects brand to menu */
+        }
+
+        /* The container for the nav menu */
+        .nav-menu-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            margin-top: -10px;
+            /* Reset to tight/overlapping to ensure hover bridge works */
+        }
+
+        /* Show menu ONLY when hovering the Left Group (Brand + Menu) */
+        .nav-left-group:hover .nav-menu-container {
+            max-height: 50px;
+            /* Height of the menu row */
+            opacity: 1;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            padding-top: 10px;
+            padding-left: 0;
+            /* Aligns with RythmicFolio */
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.95rem;
+            font-weight: 400;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .nav-link:hover {
+            color: var(--text-color);
+        }
+
+        .nav-link.active {
+            color: var(--text-color);
+            font-weight: 500;
         }
 
         .search-container {
             width: 400px;
+            display: flex;
+            align-items: center;
         }
 
         .search-input {
             width: 100%;
-            padding: 12px 20px;
-            background-color: var(--search-bg);
+            padding: 8px 16px;
+            background-color: #1a1625;
+            /* Dark purple/blue tint from screenshot approximation */
             border: none;
             border-radius: 4px;
             color: #ccc;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             outline: none;
         }
 
@@ -293,9 +358,23 @@
     <div class="app-container">
         <!-- Navigation -->
         <nav class="navbar">
-            <div class="brand">RythmicFolio</div>
+            <!-- Left Group: Brand + Menu -->
+            <div class="nav-left-group">
+                <div class="brand brand-trigger">RythmicFolio</div>
+                <div class="nav-menu-container">
+                    <div class="nav-links">
+                        <a href="#" class="nav-link">Home</a>
+                        <a href="#" class="nav-link">Personal Portfolio</a>
+                        <a href="#" class="nav-link">Outlook & Strategy</a>
+                        <a href="#" class="nav-link active">Stock Analysis</a>
+                        <a href="#" class="nav-link">DCF Calculator</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Group: Search (Outside the hover target) -->
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Enter Ticker Symbol ...">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search Stocks ....">
             </div>
         </nav>
 

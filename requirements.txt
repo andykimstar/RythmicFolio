@@ -3,3 +3,6 @@ flask-cors
 pandas
 yfinance
 gunicorn
+Flask-Limiter
+requests
+python-dotenv

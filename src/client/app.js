@@ -43,7 +43,7 @@ function handleSearch() {
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000'
-    : 'https://YOUR_BACKEND_URL_HERE'; // TODO: Replace with your actual deployed backend URL after deployment
+    : ''; // Relative path for production (proxied by Firebase Hosting)
 
 async function fetchStockData(symbol, period = '1d') {
     if (!symbol) return;
@@ -54,12 +54,25 @@ async function fetchStockData(symbol, period = '1d') {
     let statisticsData = null;
 
     try {
-        // Parallel requests: Quote, History, and Statistics
+        // Execute reCAPTCHA
+        const token = await new Promise((resolve) => {
+            grecaptcha.ready(function () {
+                grecaptcha.execute('6Ldn2VwsAAAAAHtsrNTaXws8T2xY67d5JgwPbrMu', { action: 'search' }).then(function (token) {
+                    resolve(token);
+                });
+            });
+        });
+
+        // Parallel requests: Quote (Protected), History, and Statistics
         const [quoteRes, historyRes, statsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/quote/${symbolClean}`),
+            fetch(`${API_BASE_URL}/api/quote/${symbolClean}`, {
+                headers: { 'X-Recaptcha-Token': token }
+            }),
             fetch(`${API_BASE_URL}/api/history/${symbolClean}?period=${period}`),
             fetch(`${API_BASE_URL}/api/statistics/${symbolClean}`)
         ]);
+
+
 
         if (quoteRes.ok) {
             quoteData = await quoteRes.json();
