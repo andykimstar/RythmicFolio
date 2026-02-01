@@ -28,6 +28,10 @@ stock_service = StockDataService()
 RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY")
 
 def verify_recaptcha(token):
+    # Bypass for local testing
+    if request.remote_addr == '127.0.0.1' or request.remote_addr == 'localhost':
+        return True
+    
     if not RECAPTCHA_SECRET_KEY:
         return True # Bypass if no key configured (for dev/testing)
     
