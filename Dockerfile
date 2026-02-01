@@ -10,7 +10,11 @@ COPY . /app
 # Install any exact references to packages from requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Make port 8080 available to the world outside this container (Cloud Run expects 8080 by default)
+# Create a writable cache directory for yfinance/matplotlib
+RUN mkdir -p /tmp/runtime-user
+ENV XDG_CACHE_HOME=/tmp/runtime-user
+
+# Make port 8080 available to the world outside this container
 EXPOSE 8080
 
 # Run app.py using gunicorn when the container launches
