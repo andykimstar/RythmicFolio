@@ -4,40 +4,71 @@ let stockChart = null;
 let currentSymbol = 'AAPL'; // Track current symbol
 let currentPeriod = '1d';  // Track current period
 
+// Helper to get query params
+function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial data load
-    fetchStockData(currentSymbol, currentPeriod);
+    // Check for symbol in URL query params on load (e.g. ?symbol=TSLA)
+    const symbolFromUrl = getQueryParam('symbol');
+    if (symbolFromUrl) {
+        currentSymbol = symbolFromUrl;
+        // Clean URL after reading without reload
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+    }
+
+    // Only fetch data if we are on the Stock Analysis page (index.html)
+    // We check if the chart element exists to confirm we are on the right page
+    if (document.getElementById('stockChart')) {
+        fetchStockData(currentSymbol, currentPeriod);
+    }
 
     const searchInput = document.getElementById('searchInput');
 
     // Search Event Listeners
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    });
-
-    // Timeframe Event Listeners
-    const intervals = document.querySelectorAll('.interval');
-    intervals.forEach(interval => {
-        interval.addEventListener('click', () => {
-            // Update UI
-            intervals.forEach(i => i.classList.remove('active'));
-            interval.classList.add('active');
-
-            // Update Data
-            currentPeriod = interval.getAttribute('data-period');
-            fetchStockData(currentSymbol, currentPeriod);
+    // Search Event Listeners
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
         });
-    });
+    }
+
+    // Timeframe Event Listeners (Only on Dashboard)
+    if (document.getElementById('stockChart')) {
+        const intervals = document.querySelectorAll('.interval');
+        intervals.forEach(interval => {
+            interval.addEventListener('click', () => {
+                // Update UI
+                intervals.forEach(i => i.classList.remove('active'));
+                interval.classList.add('active');
+
+                // Update Data
+                currentPeriod = interval.getAttribute('data-period');
+                fetchStockData(currentSymbol, currentPeriod);
+            });
+        });
+    }
 });
 
 function handleSearch() {
     const searchInput = document.getElementById('searchInput');
     const symbol = searchInput.value.trim();
+
     if (symbol) {
-        currentSymbol = symbol;
-        fetchStockData(currentSymbol, currentPeriod);
+        // If we are NOT on the main dashboard (index.html), redirect there
+        // Identify main page by presence of specific UI element like 'stockChart'
+        if (!document.getElementById('stockChart')) {
+            window.location.href = `index.html?symbol=${encodeURIComponent(symbol)}`;
+        } else {
+            // Already on dashboard, just fetch
+            currentSymbol = symbol;
+            fetchStockData(currentSymbol, currentPeriod);
+        }
     }
 }
 
@@ -49,33 +80,63 @@ async function fetchStockData(symbol, period = '1d') {
     if (!symbol) return;
     const symbolClean = symbol.toUpperCase();
 
+    // Loading State
+    const searchInput = document.getElementById('searchInput');
+    const originalPlaceholder = searchInput.placeholder;
+    searchInput.placeholder = `Searching ${symbolClean}...`;
+    searchInput.disabled = true;
+    document.body.style.cursor = 'wait';
+
+    // Clear potentially old error state
+    const titleEl = document.getElementById('companyName');
+    if (titleEl.innerText.startsWith('Error')) {
+        titleEl.innerText = '';
+    }
+
     let quoteData = null;
     let historyData = null;
     let statisticsData = null;
+    let errorOccurred = null;
 
     try {
         // Execute reCAPTCHA
         const token = await new Promise((resolve) => {
-            grecaptcha.ready(function () {
-                grecaptcha.execute('6Ldn2VwsAAAAAHtsrNTaXws8T2xY67d5JgwPbrMu', { action: 'search' }).then(function (token) {
-                    resolve(token);
+            if (typeof grecaptcha !== 'undefined') {
+                grecaptcha.ready(function () {
+                    grecaptcha.execute('6Ldn2VwsAAAAAHtsrNTaXws8T2xY67d5JgwPbrMu', { action: 'search' })
+                        .then(resolve)
+                        .catch(() => resolve(null)); // Fallback if execution fails
                 });
-            });
+            } else {
+                resolve(null); // Local dev or blocked
+            }
         });
+
+        // Parallel requests with Timeout Promise
+        // We use a simple timeout race to prevent infinite hanging
+        const fetchWithTimeout = (url, options = {}, timeout = 12000) => {
+            return Promise.race([
+                fetch(url, options),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Request Timeout')), timeout)
+                )
+            ]);
+        };
 
         // Parallel requests: Quote (Protected), History, and Statistics
         const [quoteRes, historyRes, statsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/quote/${symbolClean}`, {
+            fetchWithTimeout(`${API_BASE_URL}/api/quote/${symbolClean}`, {
                 headers: { 'X-Recaptcha-Token': token }
             }),
-            fetch(`${API_BASE_URL}/api/history/${symbolClean}?period=${period}`),
-            fetch(`${API_BASE_URL}/api/statistics/${symbolClean}`)
+            fetchWithTimeout(`${API_BASE_URL}/api/history/${symbolClean}?period=${period}`),
+            fetchWithTimeout(`${API_BASE_URL}/api/statistics/${symbolClean}`)
         ]);
-
-
 
         if (quoteRes.ok) {
             quoteData = await quoteRes.json();
+        } else {
+            console.warn('Quote fetch failed:', quoteRes.status);
+            if (quoteRes.status === 404) errorOccurred = 'Stock Not Found';
         }
 
         if (historyRes.ok) {
@@ -91,6 +152,10 @@ async function fetchStockData(symbol, period = '1d') {
 
         if (quoteData && !quoteData.error) {
             updateHeaderInfo(quoteData, historyData, period);
+        } else if (!quoteData && errorOccurred) {
+            // Show error if quote failed explicitly
+            document.getElementById('companyName').innerText = `Error: ${errorOccurred}`;
+            document.getElementById('symbolLabel').innerText = symbolClean;
         }
 
         if (statisticsData && !statisticsData.error) {
@@ -99,6 +164,13 @@ async function fetchStockData(symbol, period = '1d') {
 
     } catch (error) {
         console.error('Data fetch error:', error);
+        document.getElementById('companyName').innerText = 'Network Error / Timeout. Backend may be waking up.';
+    } finally {
+        // Reset Loading State
+        searchInput.placeholder = originalPlaceholder;
+        searchInput.disabled = false;
+        document.body.style.cursor = 'default';
+        searchInput.focus();
     }
 }
 

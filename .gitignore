@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+.firebase/
 rythmicfolio-firebase-adminsdk-fbsvc-bc75dfca5a.json
 test_firebase.py
 test_script.py
