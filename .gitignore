@@ -1,1 +1,12 @@
-node_modules
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+rythmicfolio-firebase-adminsdk-fbsvc-bc75dfca5a.json
+test_firebase.py
+test_script.py
+error_log.txt
+output.txt
+results.txt

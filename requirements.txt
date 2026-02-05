@@ -6,3 +6,4 @@ gunicorn
 Flask-Limiter
 requests
 python-dotenv
+firebase-admin

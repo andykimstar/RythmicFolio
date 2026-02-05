@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RythmicFolio | Portfolio</title>
+    <!-- Chart.js for the main chart (portfolio value) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0f1a;
+            --text-color: #ffffff;
+            --text-muted: #8b949e;
+            --accent-green: #00E396;
+            --accent-red: #ff4560;
+            --search-bg: #1e2433;
+            --stats-bg: #808080;
+            /* Card/Section Background matching index.html chart wrapper */
+            --card-bg: #161b29;
+            --border-color: #2a2f3e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 40px;
+        }
+
+        /* --- Navbar (Copied & Adapted) --- */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .nav-left-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #d1d5db;
+            position: relative;
+            cursor: pointer;
+            /* Changed to pointer */
+        }
+
+        .brand-trigger {
+            padding-bottom: 20px;
+        }
+
+        .nav-menu-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            margin-top: -10px;
+        }
+
+        .nav-left-group:hover .nav-menu-container {
+            max-height: 50px;
+            opacity: 1;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            padding-top: 10px;
+            padding-left: 0;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.95rem;
+            font-weight: 400;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .nav-link:hover {
+            color: var(--text-color);
+        }
+
+        .nav-link.active {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .search-container {
+            width: 400px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 16px;
+            background-color: #1a1625;
+            border: none;
+            border-radius: 4px;
+            color: #ccc;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        /* --- Portfolio Specific Styles --- */
+
+        /* Portfolio Header */
+        .portfolio-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+
+        .portfolio-title {
+            font-size: 2rem;
+            font-weight: 400;
+            margin: 0;
+            color: #d1d5db;
+        }
+
+        .portfolio-change {
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--accent-green);
+        }
+
+        /* Time Wrapper */
+        .time-wrapper {
+            margin-bottom: 20px;
+        }
+
+        .time-intervals {
+            display: flex;
+            gap: 15px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .time-interval {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .time-interval.active {
+            color: var(--text-color);
+            border-bottom: 1px solid var(--text-color);
+        }
+
+        /* Main Chart Area */
+        .chart-section {
+            background: linear-gradient(180deg, #161b29 0%, #161b29 100%);
+            border-radius: 8px;
+            padding: 20px;
+            height: 350px;
+            margin-bottom: 40px;
+        }
+
+        /* Strategy Section */
+        .strategy-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 15px;
+            color: #d1d5db;
+        }
+
+        .strategy-text {
+            color: #9ca3af;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .strategy-text p {
+            margin-bottom: 15px;
+        }
+
+        /* Tables (Holdings/Watchlist) */
+        .table-section {
+            background-color: #1a1a2e;
+            /* Slightly lighter/purple tint from image */
+            background-color: rgba(30, 30, 46, 0.4);
+            /* Transparent dark */
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .custom-table th {
+            text-align: right;
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 0.85rem;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .custom-table th:first-child {
+            text-align: left;
+            padding-left: 10px;
+        }
+
+        .custom-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            vertical-align: middle;
+            font-size: 0.95rem;
+            text-align: right;
+        }
+
+        .custom-table td:first-child {
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Asset Color Bar */
+        .asset-color-bar {
+            width: 6px;
+            height: 35px;
+            border-radius: 2px;
+            background-color: #555;
+            /* Default */
+        }
+
+        .asset-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .asset-ticker {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .asset-name {
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+
+        .text-green {
+            color: var(--accent-green);
+        }
+
+        .text-red {
+            color: var(--accent-red);
+        }
+
+        /* Specific Color Bars (matching image roughly) */
+        .bar-amd {
+            background-color: #6da36d;
+        }
+
+        /* Greenish */
+        .bar-amzn {
+            background-color: #ff9900;
+        }
+
+        /* Orange */
+        .bar-googl {
+            background-color: #fbbc05;
+        }
+
+        /* Yellow */
+        .bar-meta {
+            background-color: #1877f2;
+        }
+
+        /* Blue */
+        .bar-nvo {
+            background-color: #4b0082;
+        }
+
+        /* Purple/Dark Blue */
+
+        .bar-nflx {
+            background-color: #E50914;
+        }
+
+        /* Red */
+        .bar-aapl {
+            background-color: #A2AAAD;
+        }
+
+        /* Grey/White */
+        .bar-jpm {
+            background-color: #005EB8;
+        }
+
+        /* Blue */
+        .bar-rklb {
+            background-color: #333;
+        }
+
+        /* Black/Dark */
+        .bar-lly {
+            background-color: #ffcccc;
+        }
+
+        /* Pinkish */
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <!-- Left Group: Brand + Menu -->
+            <div class="nav-left-group">
+                <div class="brand brand-trigger" onclick="window.location.href='index.html'">RythmicFolio</div>
+                <div class="nav-menu-container">
+                    <div class="nav-links">
+                        <a href="index.html" class="nav-link">Home</a>
+                        <a href="portfolio.html" class="nav-link active">Personal Portfolio</a>
+                        <a href="#" class="nav-link">Outlook & Strategy</a>
+                        <a href="index.html" class="nav-link">Stock Analysis</a>
+                        <a href="#" class="nav-link">DCF Calculator</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Group: Search (Outside the hover target) -->
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search Stocks ...">
+            </div>
+        </nav>
+
+        <!-- Portfolio Header -->
+        <div class="portfolio-header">
+            <h1 class="portfolio-title">Personal Portfolio</h1>
+            <span class="portfolio-change">+2.16%</span>
+        </div>
+
+        <div class="time-wrapper">
+            <div class="time-intervals">
+                <span class="time-interval">1d</span>
+                <span class="time-interval">5d</span>
+                <span class="time-interval">1m</span>
+                <span class="time-interval">3m</span>
+                <span class="time-interval">6m</span>
+                <span class="time-interval">YTD</span>
+                <span class="time-interval active">1Y</span>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <canvas id="portfolioChart"></canvas>
+        </div>
+
+        <!-- Strategy Section -->
+        <div class="strategy-section">
+            <h2 class="section-title">2026 Strategy & Outlook</h2>
+            <div class="strategy-text">
+                <p>With much of my 2025 portfolio focused on Tech (Software) and specifically MAG 7, this 2026 is a
+                    focus in the diversification into industries outside of tech such as Semis, Health Care, Defense,
+                    Finance and etc... while maximizing growth opportunities. With high volatility expected for the
+                    first-half of this year, the priority pivots into under-valued and dislocated stocks with high
+                    upside of a comeback in the second-half.</p>
+                <p>More info on previous and current strategy can be see in the Strategy Section. Please view to read
+                    reasons for positions in holdings, exit and watch list</p>
+            </div>
+        </div>
+
+        <!-- Holdings -->
+        <h2 class="section-title">Holdings</h2>
+        <div class="table-section">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">Name</th>
+                        <th>Current Price</th>
+                        <th>Portfolio Weight</th>
+                        <th>Target Price</th>
+                        <th>Upside</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-amd"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">AMD</span>
+                                <span class="asset-name">Advanced Micro Devices Inc.</span>
+                            </div>
+                        </td>
+                        <td>$259.68</td>
+                        <td>13.46%</td>
+                        <td>$330</td>
+                        <td class="text-green">+21.30%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-amzn"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">AMZN</span>
+                                <span class="asset-name">Amazon.com Inc.</span>
+                            </div>
+                        </td>
+                        <td>$239.18</td>
+                        <td>24.85%</td>
+                        <td>$300</td>
+                        <td class="text-green">+20.28%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-googl"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">GOOGL</span>
+                                <span class="asset-name">Alphabet Inc (Class A)</span>
+                            </div>
+                        </td>
+                        <td>$327.93</td>
+                        <td>33.30%</td>
+                        <td>$350</td>
+                        <td class="text-green">+6.31%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-meta"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">META</span>
+                                <span class="asset-name">Meta Platforms Inc.</span>
+                            </div>
+                        </td>
+                        <td>$658.76</td>
+                        <td>26.23%</td>
+                        <td>$750</td>
+                        <td class="text-green">+13.33%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-nvo"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">NVO</span>
+                                <span class="asset-name">Novo Nordisk A/S</span>
+                            </div>
+                        </td>
+                        <td>$62.26</td>
+                        <td>2.16%</td>
+                        <td>$65</td>
+                        <td class="text-green">+26.75%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Watch List -->
+        <h2 class="section-title">Watch List</h2>
+        <div class="table-section">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">Name</th>
+                        <th>Current Price</th>
+                        <th>P/E Ratio</th>
+                        <th>Beta</th>
+                        <th>Week %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-nflx"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">NFLX</span>
+                                <span class="asset-name">Netflix, Inc.</span>
+                            </div>
+                        </td>
+                        <td>$86.12</td>
+                        <td>34.04</td>
+                        <td>1.71</td>
+                        <td class="text-red">-2.37%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-aapl"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">AAPL</span>
+                                <span class="asset-name">Apple Inc.</span>
+                            </div>
+                        </td>
+                        <td>$248.04</td>
+                        <td>33.20</td>
+                        <td>1.09</td>
+                        <td class="text-red">-3.96%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-jpm"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">JPM</span>
+                                <span class="asset-name">JPMorgan Chase & Co.</span>
+                            </div>
+                        </td>
+                        <td>$297.72</td>
+                        <td>14.88</td>
+                        <td>1.07</td>
+                        <td class="text-red">-4.12%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-rklb"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">RKLB</span>
+                                <span class="asset-name">Rocket Lab Corporation</span>
+                            </div>
+                        </td>
+                        <td>$88.90</td>
+                        <td>-</td>
+                        <td>2.17</td>
+                        <td class="text-red">-7.30%</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="asset-color-bar bar-lly"></div>
+                            <div class="asset-info">
+                                <span class="asset-ticker">LLY</span>
+                                <span class="asset-name">Eli Lilly and Company</span>
+                            </div>
+                        </td>
+                        <td>$1,064.29</td>
+                        <td>52.09</td>
+                        <td>0.35</td>
+                        <td class="text-green">+3.15%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        // Placeholder Chart (mimicking the image look roughly)
+        const ctx = document.getElementById('portfolioChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(0, 227, 150, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 227, 150, 0.0)');
+
+        const portfolioChart = new Chart(ctx, {
+            type: 'bar', // Using bar to mimic the "EQ Weighted" look in image, although image looks like mixed or stacked area
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: [10000, 10500, 10200, 10800, 11500, 11200, 12100, 12500, 12300, 12800, 13100, 13500],
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Faint bars
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderWidth: 0,
+                    categoryPercentage: 1.0,
+                    barPercentage: 1.0 // Make them wide like a histogram/area
+                }, {
+                    label: 'Gains',
+                    data: [0, 500, 200, 800, 1500, 1200, 2100, 2500, 2300, 2800, 3100, 3500],
+                    type: 'line',
+                    borderColor: '#00E396',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
