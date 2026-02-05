@@ -77,7 +77,7 @@ function handleSearch() {
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000'
-    : ''; // Relative path for production (proxied by Firebase Hosting)
+    : 'https://rythmicfolio-backend-hjm2rflydq-uc.a.run.app'; // Direct Cloud Run URL for production
 
 async function fetchStockData(symbol, period = '1d') {
     if (!symbol) return;
