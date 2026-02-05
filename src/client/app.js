@@ -22,8 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Only fetch data if we are on the Stock Analysis page (index.html)
     // We check if the chart element exists to confirm we are on the right page
-    if (document.getElementById('stockChart')) {
+    if (document.getElementById('stockChart') && !symbolFromUrl) {
+        // Default load if no URL param
         fetchStockData(currentSymbol, currentPeriod);
+    } else if (document.getElementById('stockChart') && symbolFromUrl) {
+        fetchStockData(symbolFromUrl, currentPeriod);
     }
 
     const searchInput = document.getElementById('searchInput');
@@ -164,13 +167,21 @@ async function fetchStockData(symbol, period = '1d') {
 
     } catch (error) {
         console.error('Data fetch error:', error);
-        document.getElementById('companyName').innerText = 'Network Error / Timeout. Backend may be waking up.';
+        const titleEl = document.getElementById('companyName');
+        if (titleEl) {
+            // Only overwrite if we don't have partial data
+            if (titleEl.innerText === '' || titleEl.innerText === 'Waiting...') {
+                titleEl.innerText = 'Unable to fetch data. Please try again.';
+            }
+        }
     } finally {
         // Reset Loading State
-        searchInput.placeholder = originalPlaceholder;
-        searchInput.disabled = false;
+        if (searchInput) {
+            searchInput.placeholder = originalPlaceholder;
+            searchInput.disabled = false;
+            searchInput.focus();
+        }
         document.body.style.cursor = 'default';
-        searchInput.focus();
     }
 }
 

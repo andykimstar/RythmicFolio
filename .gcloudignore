@@ -1,0 +1,33 @@
+
+# Environment & Dependencies
+.venv
+__pycache__
+*.pyc
+
+# Git
+.git
+.gitignore
+
+# Env Keys (Should NOT be uploaded)
+.env
+rythmicfolio-firebase-adminsdk-fbsvc-bc75dfca5a.json
+
+# Node Modules (Frontend only)
+node_modules
+package-lock.json
+package.json
+
+# Firebase Local Cache
+.firebase
+.firebaserc
+firebase.json
+
+# Source
+src/
+
+# Logs & Temp Files
+error_log.txt
+output.txt
+results.txt
+test_firebase.py
+verify_annual_dates.py
