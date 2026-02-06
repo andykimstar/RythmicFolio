@@ -14,10 +14,12 @@ if not firebase_admin._apps:
 else:
     app = firebase_admin.get_app()
 
-# Get the Firestore client
+# Get the Firestore client for the specific database 'rythmicfolio'
 db = firestore.Client(
     project=app.project_id,
-    credentials=app.credential.get_credential()
+    credentials=app.credential.get_credential(),
+    database='rythmicfolio'
 )
+
 
 print(f"Connected to Firestore DB: {db._database} in project {db.project}")

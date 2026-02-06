@@ -1,1 +1,2 @@
-from .firebase_db import db
+from .firebase_db import db, app
+

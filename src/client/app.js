@@ -856,42 +856,253 @@ function formatNetworkNumber(num) {
     return n.toFixed(2);
 }
 
+let allHoldings = [];
+let sortConfig = { key: 'name', direction: 'asc' }; // Added back for Holdings
+let allWatchlist = [];
+let watchlistSortConfig = { key: 'name', direction: 'asc' };
+
+
+function renderWatchlistTable() {
+    const watchlistBody = document.getElementById('watchlistBody');
+    if (!watchlistBody) return;
+
+    // Apply Sorting
+    const sorted = [...allWatchlist].sort((a, b) => {
+        let valA = a[watchlistSortConfig.key];
+        let valB = b[watchlistSortConfig.key];
+
+        // Handle alphabetical sorting for 'name'
+        if (watchlistSortConfig.key === 'name') {
+            valA = (a.name || a.symbol).toLowerCase();
+            valB = (b.name || b.symbol).toLowerCase();
+            if (valA < valB) return watchlistSortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return watchlistSortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        }
+
+        // Handle numeric sorting
+        valA = parseFloat(valA) || 0;
+        valB = parseFloat(valB) || 0;
+        return watchlistSortConfig.direction === 'asc' ? valA - valB : valB - valA;
+    });
+
+    watchlistBody.innerHTML = '';
+    sorted.forEach(stock => {
+        const tr = document.createElement('tr');
+        const weekChange = stock.week_change !== undefined ? stock.week_change : "-";
+        const weekChangeVal = (weekChange !== "-" && !isNaN(parseFloat(weekChange)))
+            ? (parseFloat(weekChange) >= 0 ? `+${parseFloat(weekChange).toFixed(2)}%` : `${parseFloat(weekChange).toFixed(2)}%`)
+            : "-";
+        const weekChangeClass = weekChange !== "-" ? (weekChange >= 0 ? 'text-green' : 'text-red') : '';
+
+        const priceVal = (stock.current_price !== null && stock.current_price !== undefined && stock.current_price !== "-")
+            ? `$${Number(stock.current_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : "-";
+
+        tr.innerHTML = `
+            <td>
+                <div class="asset-color-bar" style="background-color: ${stock.color || '#555'}"></div>
+                <div class="asset-info">
+                    <span class="asset-ticker">${stock.symbol}</span>
+                    <span class="asset-name">${stock.name || stock.symbol}</span>
+                </div>
+            </td>
+            <td>${priceVal}</td>
+            <td class="${weekChangeClass}">${weekChangeVal}</td>
+
+        `;
+        watchlistBody.appendChild(tr);
+    });
+
+    // Update Sort Icons
+    const headers = watchlistBody.closest('table').querySelectorAll('.sortable');
+    headers.forEach(header => {
+        const key = header.getAttribute('data-sort');
+        const iconInfo = header.querySelector('.sort-icon');
+        if (iconInfo) {
+            if (watchlistSortConfig.key === key) {
+                iconInfo.textContent = watchlistSortConfig.direction === 'asc' ? '▲' : '▼';
+                header.style.color = 'var(--text-color)';
+            } else {
+                iconInfo.textContent = '';
+                header.style.color = 'var(--text-muted)';
+            }
+        }
+    });
+}
+
+async function fetchWatchlist() {
+    const watchlistBody = document.getElementById('watchlistBody');
+    if (!watchlistBody) return;
+
+    watchlistBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 40px;">Loading Watchlist...</td></tr>';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/watchlist`);
+        if (!response.ok) throw new Error('Failed to fetch watchlist');
+
+        const data = await response.json();
+        allWatchlist = data.watchlist || [];
+        renderWatchlistTable();
+
+        // Add sorting listeners
+        const table = watchlistBody.closest('table');
+        if (table) {
+            const headers = table.querySelectorAll('.sortable');
+            headers.forEach(header => {
+                header.onclick = () => {
+                    const key = header.getAttribute('data-sort');
+                    if (watchlistSortConfig.key === key) {
+                        watchlistSortConfig.direction = watchlistSortConfig.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        watchlistSortConfig.key = key;
+                        watchlistSortConfig.direction = 'desc';
+                    }
+                    renderWatchlistTable();
+                };
+            });
+        }
+
+    } catch (error) {
+        console.error('Error loading watchlist:', error);
+        watchlistBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--accent-red); padding: 40px;">Error loading watchlist</td></tr>';
+    }
+}
+
+
+
+
+function renderHoldingsTable() {
+    const holdingsBody = document.getElementById('holdingsBody');
+    if (!holdingsBody) return;
+
+    // Apply Sorting
+    const sorted = [...allHoldings].sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+
+        // Handle alphabetical sorting for 'name'
+        if (sortConfig.key === 'name') {
+            valA = (a.name || a.symbol).toLowerCase();
+            valB = (b.name || b.symbol).toLowerCase();
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        }
+
+        // Handle numeric sorting for others (weight, current_price, etc.)
+        valA = parseFloat(valA) || 0;
+        valB = parseFloat(valB) || 0;
+        return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+    });
+
+    holdingsBody.innerHTML = '';
+    sorted.forEach(stock => {
+        const tr = document.createElement('tr');
+        const weekChange = stock.week_change !== undefined ? stock.week_change : "-";
+        const weekChangeVal = (weekChange !== "-" && !isNaN(parseFloat(weekChange)))
+            ? (parseFloat(weekChange) >= 0 ? `+${parseFloat(weekChange).toFixed(2)}%` : `${parseFloat(weekChange).toFixed(2)}%`)
+            : "-";
+        const weekChangeClass = weekChange !== "-" ? (weekChange >= 0 ? 'text-green' : 'text-red') : '';
+
+        const priceVal = (stock.current_price !== null && stock.current_price !== undefined && stock.current_price !== "-")
+            ? `$${Number(stock.current_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : "-";
+        const weightVal = (stock.weight !== null && stock.weight !== undefined) ? `${stock.weight}%` : "0%";
+
+        tr.innerHTML = `
+            <td>
+                <div class="asset-color-bar" style="background-color: ${stock.color || '#555'}"></div>
+                <div class="asset-info">
+                    <span class="asset-ticker">${stock.symbol}</span>
+                    <span class="asset-name">${stock.name || stock.symbol}</span>
+                </div>
+            </td>
+            <td>${priceVal}</td>
+            <td>${weightVal}</td>
+            <td>$${stock.target_price || "-"}</td>
+            <td class="${weekChangeClass}">${weekChangeVal}</td>
+        `;
+
+        holdingsBody.appendChild(tr);
+    });
+
+    // Update Sort Icons
+    document.querySelectorAll('.sortable').forEach(th => {
+        const icon = th.querySelector('.sort-icon');
+        const key = th.getAttribute('data-sort');
+        if (key === sortConfig.key) {
+            icon.textContent = sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+        } else {
+            icon.textContent = '';
+        }
+    });
+}
+
 async function fetchHoldings() {
     const holdingsBody = document.getElementById('holdingsBody');
     if (!holdingsBody) return;
+
+    const searchInput = document.getElementById('searchInput');
+
+
+    // Loading State
+    document.body.style.cursor = 'wait';
+    if (searchInput) {
+        searchInput.disabled = true;
+        searchInput.placeholder = "Loading Portfolio...";
+    }
+    holdingsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 40px;">Loading Holdings...</td></tr>';
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/holdings`);
         if (!response.ok) throw new Error('Failed to fetch holdings');
 
-        const holdings = await response.json();
-        holdingsBody.innerHTML = ''; // Clear static content
+        const data = await response.json();
+        allHoldings = data.holdings || [];
 
-        holdings.forEach(stock => {
-            const tr = document.createElement('tr');
+        // Update Portfolio Header
+        const portfolioTitle = document.getElementById('portfolioTitle');
+        if (portfolioTitle) {
+            portfolioTitle.textContent = `Portfolio Overview`;
+        }
 
-            const upsideVal = stock.upside !== "-" ? (stock.upside >= 0 ? `+${stock.upside}%` : `${stock.upside}%`) : "-";
-            const upsideClass = stock.upside !== "-" ? (stock.upside >= 0 ? 'text-green' : 'text-red') : '';
+        renderHoldingsTable();
 
-            tr.innerHTML = `
-                <td>
-                    <div class="asset-color-bar" style="background-color: ${stock.color || '#555'}"></div>
-                    <div class="asset-info">
-                        <span class="asset-ticker">${stock.symbol}</span>
-                        <span class="asset-name">${stock.name || stock.company_name || stock.symbol}</span>
-                    </div>
-                </td>
-                <td>$${stock.current_price !== "-" ? stock.current_price.toFixed(2) : "-"}</td>
-                <td>${stock.weight || "-"}%</td>
-                <td>$${stock.target_price || "-"}</td>
-                <td class="${upsideClass}">${upsideVal}</td>
-            `;
-            holdingsBody.appendChild(tr);
-        });
+        // Add sorting listeners once
+        // Ensure we only select headers within the holdings table
+        const table = holdingsBody.closest('table');
+        if (table) {
+            const headers = table.querySelectorAll('.sortable');
+            headers.forEach(header => {
+                header.onclick = () => {
+                    const key = header.getAttribute('data-sort');
+                    if (sortConfig.key === key) {
+                        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortConfig.key = key;
+                        sortConfig.direction = 'asc';
+                    }
+                    renderHoldingsTable();
+                };
+            });
+        }
 
     } catch (error) {
         console.error('Error loading holdings:', error);
-        holdingsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--accent-red);">Error loading holdings</td></tr>';
+        holdingsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--accent-red); padding: 40px;">Error: ${error.message}</td></tr>`;
+    } finally {
+
+        document.body.style.cursor = 'default';
+        if (searchInput) {
+            searchInput.disabled = false;
+            searchInput.placeholder = "Search Stocks ...";
+        }
     }
+
+    // Explicitly call fetchWatchlist after holdings start (or in parallel)
+    fetchWatchlist();
 }
+
+
 

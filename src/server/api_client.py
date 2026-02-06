@@ -199,15 +199,16 @@ class StockDataService:
         try:
             ticker = yf.Ticker(symbol)
             
-            # Fetch 5 days of history to ensure we have recent market data for open/close/high/low
-            data = ticker.history(period="5d")
+            # Fetch 1 week of history to calculate weekly change
+            data = ticker.history(period="1wk")
             
             if data.empty:
                 print(f"yfinance returned no data for {symbol}.")
                 return None
 
-            # Get the last row (most recent trading data)
+            # last_quote is today, first_quote is the start of the week
             last_quote = data.iloc[-1]
+            first_quote = data.iloc[0]
             
             # Safely fetch metadata from ticker.info
             company_name = self._get_info(ticker, 'longName', default=symbol.upper())
@@ -217,6 +218,11 @@ class StockDataService:
             if live_price == 0:
                 live_price = float(last_quote['Close'])
 
+            # Calculate 1-week change
+            week_start_price = float(first_quote['Close'])
+            week_change = live_price - week_start_price
+            week_change_percent = (week_change / week_start_price) * 100 if week_start_price else 0
+
             mkt_cap = self._get_info(ticker, 'marketCap', default='-')
             trail_pe = self._get_info(ticker, 'trailingPE', default='-')
             trail_eps = self._get_info(ticker, 'trailingEps', default='-')
@@ -224,7 +230,7 @@ class StockDataService:
 
             open_price = float(last_quote['Open'])
             
-            # Calculate change
+            # Calculate daily change
             change = live_price - open_price
             change_percent = (change / open_price) * 100 if open_price else 0
             
@@ -246,7 +252,9 @@ class StockDataService:
                 "price": safe_round(live_price),
                 "change": safe_round(change),
                 "change_percent": f"{safe_round(change_percent)}%",
+                "week_change_percent": safe_round(week_change_percent),
                 "volume": int(last_quote['Volume']),
+
                 "open": safe_round(open_price),
                 "close": safe_round(float(last_quote['Close'])),
                 "high": safe_round(float(last_quote['High'])),

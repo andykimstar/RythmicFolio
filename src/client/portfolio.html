@@ -216,25 +216,51 @@
         }
 
         .custom-table th {
-            text-align: right;
             color: var(--text-muted);
             font-weight: 400;
             font-size: 0.85rem;
             padding: 10px 15px;
             border-bottom: 1px solid var(--border-color);
+            text-align: center;
         }
+
+        .custom-table th .sort-container {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+        }
+
 
         .custom-table th:first-child {
             text-align: left;
             padding-left: 10px;
         }
 
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sortable:hover {
+            color: var(--text-color);
+        }
+
+        .sort-icon {
+            position: absolute;
+            left: 100%;
+            margin-left: 4px;
+            font-size: 0.7rem;
+            width: 15px;
+            text-align: left;
+        }
+
+
         .custom-table td {
             padding: 15px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             vertical-align: middle;
             font-size: 0.95rem;
-            text-align: right;
+            text-align: center;
         }
 
         .custom-table td:first-child {
@@ -362,11 +388,11 @@
             </div>
         </nav>
 
-        <!-- Portfolio Header -->
         <div class="portfolio-header">
-            <h1 class="portfolio-title">Personal Portfolio</h1>
-            <span class="portfolio-change">+2.16%</span>
+            <h1 class="portfolio-title" id="portfolioTitle">Portfolio Overview</h1>
+            <span class="portfolio-change" id="portfolioChange">-</span>
         </div>
+
 
         <div class="time-wrapper">
             <div class="time-intervals">
@@ -405,81 +431,32 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%">Name</th>
-                        <th>Current Price</th>
-                        <th>Portfolio Weight</th>
-                        <th>Target Price</th>
-                        <th>Upside</th>
+                        <th style="width: 40%" class="sortable" data-sort="name">
+                            <div class="sort-container" style="justify-content: flex-start;">Name <span
+                                    class="sort-icon"></span></div>
+                        </th>
+                        <th>
+                            <div class="sort-container">Current Price</div>
+                        </th>
+                        <th class="sortable" data-sort="weight">
+                            <div class="sort-container">Portfolio Weight <span class="sort-icon"></span></div>
+                        </th>
+                        <th>
+                            <div class="sort-container">Target Price</div>
+                        </th>
+                        <th class="sortable" data-sort="week_change">
+                            <div class="sort-container">Week % <span class="sort-icon"></span></div>
+                        </th>
                     </tr>
                 </thead>
-                <tbody id="holdingsBody">
 
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-amd"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">AMD</span>
-                                <span class="asset-name">Advanced Micro Devices Inc.</span>
-                            </div>
-                        </td>
-                        <td>$259.68</td>
-                        <td>13.46%</td>
-                        <td>$330</td>
-                        <td class="text-green">+21.30%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-amzn"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">AMZN</span>
-                                <span class="asset-name">Amazon.com Inc.</span>
-                            </div>
-                        </td>
-                        <td>$239.18</td>
-                        <td>24.85%</td>
-                        <td>$300</td>
-                        <td class="text-green">+20.28%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-googl"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">GOOGL</span>
-                                <span class="asset-name">Alphabet Inc (Class A)</span>
-                            </div>
-                        </td>
-                        <td>$327.93</td>
-                        <td>33.30%</td>
-                        <td>$350</td>
-                        <td class="text-green">+6.31%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-meta"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">META</span>
-                                <span class="asset-name">Meta Platforms Inc.</span>
-                            </div>
-                        </td>
-                        <td>$658.76</td>
-                        <td>26.23%</td>
-                        <td>$750</td>
-                        <td class="text-green">+13.33%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-nvo"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">NVO</span>
-                                <span class="asset-name">Novo Nordisk A/S</span>
-                            </div>
-                        </td>
-                        <td>$62.26</td>
-                        <td>2.16%</td>
-                        <td>$65</td>
-                        <td class="text-green">+26.75%</td>
-                    </tr>
+
+
+
+                <tbody id="holdingsBody">
+                    <!-- Dynamic content loaded from Firebase via app.js -->
                 </tbody>
+
             </table>
         </div>
 
@@ -489,80 +466,23 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%">Name</th>
-                        <th>Current Price</th>
-                        <th>P/E Ratio</th>
-                        <th>Beta</th>
-                        <th>Week %</th>
+                        <th style="width: 40%" class="sortable" data-sort="name">
+                            <div class="sort-container" style="justify-content: flex-start;">Name <span
+                                    class="sort-icon"></span></div>
+                        </th>
+                        <th>
+                            <div class="sort-container">Current Price</div>
+                        </th>
+
+                        <th class="sortable" data-sort="week_change">
+                            <div class="sort-container">Week % <span class="sort-icon"></span></div>
+                        </th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-nflx"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">NFLX</span>
-                                <span class="asset-name">Netflix, Inc.</span>
-                            </div>
-                        </td>
-                        <td>$86.12</td>
-                        <td>34.04</td>
-                        <td>1.71</td>
-                        <td class="text-red">-2.37%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-aapl"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">AAPL</span>
-                                <span class="asset-name">Apple Inc.</span>
-                            </div>
-                        </td>
-                        <td>$248.04</td>
-                        <td>33.20</td>
-                        <td>1.09</td>
-                        <td class="text-red">-3.96%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-jpm"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">JPM</span>
-                                <span class="asset-name">JPMorgan Chase & Co.</span>
-                            </div>
-                        </td>
-                        <td>$297.72</td>
-                        <td>14.88</td>
-                        <td>1.07</td>
-                        <td class="text-red">-4.12%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-rklb"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">RKLB</span>
-                                <span class="asset-name">Rocket Lab Corporation</span>
-                            </div>
-                        </td>
-                        <td>$88.90</td>
-                        <td>-</td>
-                        <td>2.17</td>
-                        <td class="text-red">-7.30%</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="asset-color-bar bar-lly"></div>
-                            <div class="asset-info">
-                                <span class="asset-ticker">LLY</span>
-                                <span class="asset-name">Eli Lilly and Company</span>
-                            </div>
-                        </td>
-                        <td>$1,064.29</td>
-                        <td>52.09</td>
-                        <td>0.35</td>
-                        <td class="text-green">+3.15%</td>
-                    </tr>
+                <tbody id="watchlistBody">
+
                 </tbody>
+
             </table>
         </div>
 
@@ -627,7 +547,18 @@
             }
         });
     </script>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=15"></script>
+
+
+
+
+
+
+
+
+
+
+
 </body>
 
 </html>
