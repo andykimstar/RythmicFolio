@@ -10,7 +10,7 @@ __pycache__
 
 # Env Keys (Should NOT be uploaded)
 .env
-rythmicfolio-firebase-adminsdk-fbsvc-bc75dfca5a.json
+
 
 # Node Modules (Frontend only)
 node_modules

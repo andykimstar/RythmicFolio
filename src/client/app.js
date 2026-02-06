@@ -66,7 +66,8 @@ function handleSearch() {
         // If we are NOT on the main dashboard (index.html), redirect there
         // Identify main page by presence of specific UI element like 'stockChart'
         if (!document.getElementById('stockChart')) {
-            window.location.href = `index.html?symbol=${encodeURIComponent(symbol)}`;
+            // Redirect to root index.html with param
+            window.location.href = window.location.origin + `/index.html?symbol=${encodeURIComponent(symbol)}`;
         } else {
             // Already on dashboard, just fetch
             currentSymbol = symbol;
