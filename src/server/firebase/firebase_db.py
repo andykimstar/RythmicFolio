@@ -4,8 +4,8 @@ from google.cloud import firestore
 import os
 
 # Path to your service account JSON file
-# We use os.path.join to find the file relative to this script
-cred_path = os.path.join(os.path.dirname(__file__), "rythmicfolio-firebase-adminsdk-fbsvc-bc75dfca5a.json")
+cred_path = os.path.join(os.path.dirname(__file__), "firebase-key.json")
+
 
 # Check if Firebase is already initialized to avoid errors during reloads
 if not firebase_admin._apps:

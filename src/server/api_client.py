@@ -59,6 +59,8 @@ class StockDataService:
                 return "-"
             
             growth = ((curr - prev) / abs(prev)) * 100
+            if pd.isna(growth):
+                return "-"
             return round(growth, 2)
         except:
             return "-"
@@ -119,14 +121,16 @@ class StockDataService:
                 if df.empty or col not in df.columns:
                     return []
                 # Return last 8 periods for charts
-                series = df[col].dropna().tail(8)
-                return [{"date": str(d.date()), "value": v} for d, v in series.items()]
+                series = df[col].dropna()
+                # Further filter out any NaN values that might have survived or been introduced
+                data = [{"date": str(d.date()), "value": v} for d, v in series.tail(8).items() if not pd.isna(v)]
+                return data
 
             # Helper for Margin (EBIT / Revenue)
             def get_margin_data(df):
                 try:
                     s = (df["EBIT"] / df["Total Revenue"]) * 100
-                    return [{"date": str(d.date()), "value": v} for d, v in s.dropna().tail(8).items()]
+                    return [{"date": str(d.date()), "value": v} for d, v in s.dropna().tail(8).items() if not pd.isna(v)]
                 except: return []
 
             def get_margin_growth(df, offset):
@@ -135,7 +139,9 @@ class StockDataService:
                     if s.empty or len(s) <= offset: return "-"
                     curr = s.iloc[-1]; prev = s.iloc[-(offset+1)]
                     if not prev: return "-"
-                    return round(((curr - prev) / abs(prev)) * 100, 2)
+                    res = ((curr - prev) / abs(prev)) * 100
+                    if pd.isna(res): return "-"
+                    return round(res, 2)
                 except: return "-"
 
             return {
@@ -225,9 +231,12 @@ class StockDataService:
             # Safe extraction helper with rounding
             def safe_round(val, decimals=2):
                 if isinstance(val, (int, float)):
+                    if pd.isna(val): return "-"
                     return round(val, decimals)
                 try:
-                    return round(float(val), decimals)
+                    fval = float(val)
+                    if pd.isna(fval): return "-"
+                    return round(fval, decimals)
                 except (ValueError, TypeError):
                     return val
 

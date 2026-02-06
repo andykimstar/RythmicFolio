@@ -9,7 +9,19 @@ from dotenv import load_dotenv
 from api_client import StockDataService
 
 # Load environment variables
-load_dotenv()
+# Check multiple locations for .env
+env_paths = [
+    ".env", # Current directory
+    "../../.env", # Root from src/server
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env") # Absolute root
+]
+for path in env_paths:
+    if os.path.exists(path):
+        load_dotenv(path)
+        break
+else:
+    load_dotenv() # Fallback to default
+
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)

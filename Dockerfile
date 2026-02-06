@@ -18,4 +18,6 @@ ENV XDG_CACHE_HOME=/tmp/runtime-user
 EXPOSE 8080
 
 # Run app.py using gunicorn when the container launches
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# We use --chdir to point to the directory containing app.py so imports work correctly
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--chdir", "src/server", "app:app"]
+
