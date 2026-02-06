@@ -31,5 +31,10 @@ firebase.json
 error_log.txt
 output.txt
 results.txt
-test_firebase.py
+
+# Explicitly include these for the backend to work
+!src/server/firebase/firebase-key.json
+!src/server/firebase/test_firebase.py
+
 verify_annual_dates.py
+

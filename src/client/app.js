@@ -84,7 +84,8 @@ function handleSearch() {
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000'
-    : 'https://rythmicfolio-backend-330089869010.us-central1.run.app'; // Direct Cloud Run URL for production
+    : ''; // Use relative paths for production to leverage Firebase Rewrites
+
 
 
 async function fetchStockData(symbol, period = '1d') {
