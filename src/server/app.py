@@ -7,6 +7,8 @@ import requests
 import os
 from dotenv import load_dotenv
 from api_client import StockDataService
+from firebase import db
+
 
 # Load environment variables
 # Check multiple locations for .env
@@ -99,7 +101,46 @@ def get_statistics(symbol):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/holdings', methods=['GET'])
+def get_holdings():
+    try:
+        holdings_ref = db.collection('holdings')
+        docs = holdings_ref.stream()
+        
+        holdings_list = []
+        for doc in docs:
+            data = doc.to_dict()
+            symbol = doc.id # Assuming symbol is the document ID
+            
+            # Fetch live price for each holding
+            quote = stock_service.get_stock_quote(symbol)
+            if quote:
+                data['current_price'] = quote['price']
+                data['symbol'] = symbol
+                # Calculate upside if target_price exists
+                if 'target_price' in data:
+                    try:
+                        target = float(data['target_price'])
+                        current = float(quote['price'])
+                        upside = ((target - current) / current) * 100
+                        data['upside'] = round(upside, 2)
+                    except:
+                        data['upside'] = "-"
+                holdings_list.append(data)
+            else:
+                # If quote fails, still add with available data
+                data['symbol'] = symbol
+                data['current_price'] = "-"
+                data['upside'] = "-"
+                holdings_list.append(data)
+
+        return jsonify(holdings_list)
+    except Exception as e:
+        print(f"Error fetching holdings: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
+
     port = int(os.environ.get("PORT", 5000))
     print(f"Starting Flask server on http://localhost:{port}")
     app.run(debug=True, host='0.0.0.0', port=port)

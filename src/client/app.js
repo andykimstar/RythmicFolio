@@ -29,6 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchStockData(symbolFromUrl, currentPeriod);
     }
 
+    // Portfolio Page Specific
+    if (document.getElementById('holdingsBody')) {
+        fetchHoldings();
+    }
+
+
     const searchInput = document.getElementById('searchInput');
 
     // Search Event Listeners
@@ -78,7 +84,8 @@ function handleSearch() {
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000'
-    : 'https://rythmicfolio-backend-hjm2rflydq-uc.a.run.app'; // Direct Cloud Run URL for production
+    : 'https://rythmicfolio-backend-330089869010.us-central1.run.app'; // Direct Cloud Run URL for production
+
 
 async function fetchStockData(symbol, period = '1d') {
     if (!symbol) return;
@@ -847,3 +854,43 @@ function formatNetworkNumber(num) {
 
     return n.toFixed(2);
 }
+
+async function fetchHoldings() {
+    const holdingsBody = document.getElementById('holdingsBody');
+    if (!holdingsBody) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/holdings`);
+        if (!response.ok) throw new Error('Failed to fetch holdings');
+
+        const holdings = await response.json();
+        holdingsBody.innerHTML = ''; // Clear static content
+
+        holdings.forEach(stock => {
+            const tr = document.createElement('tr');
+
+            const upsideVal = stock.upside !== "-" ? (stock.upside >= 0 ? `+${stock.upside}%` : `${stock.upside}%`) : "-";
+            const upsideClass = stock.upside !== "-" ? (stock.upside >= 0 ? 'text-green' : 'text-red') : '';
+
+            tr.innerHTML = `
+                <td>
+                    <div class="asset-color-bar" style="background-color: ${stock.color || '#555'}"></div>
+                    <div class="asset-info">
+                        <span class="asset-ticker">${stock.symbol}</span>
+                        <span class="asset-name">${stock.name || stock.company_name || stock.symbol}</span>
+                    </div>
+                </td>
+                <td>$${stock.current_price !== "-" ? stock.current_price.toFixed(2) : "-"}</td>
+                <td>${stock.weight || "-"}%</td>
+                <td>$${stock.target_price || "-"}</td>
+                <td class="${upsideClass}">${upsideVal}</td>
+            `;
+            holdingsBody.appendChild(tr);
+        });
+
+    } catch (error) {
+        console.error('Error loading holdings:', error);
+        holdingsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--accent-red);">Error loading holdings</td></tr>';
+    }
+}
+

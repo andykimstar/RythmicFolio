@@ -23,7 +23,9 @@ package.json
 firebase.json
 
 # Source
-src/
+# (src is no longer ignored because backend code is now in src/server)
+# src/
+
 
 # Logs & Temp Files
 error_log.txt
