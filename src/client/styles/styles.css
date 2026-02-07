@@ -586,8 +586,9 @@ h1 {
     margin-bottom: 0.3rem;
 }
 
-color: var(--text-muted);
-font-size: 0.75rem;
+.color {
+    color: var(--text-muted);
+    font-size: 0.75rem;
 }
 
 /* Custom Scrollbar - Strictly Dark/Floating */

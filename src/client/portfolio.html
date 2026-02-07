@@ -173,7 +173,7 @@
             background: linear-gradient(180deg, #161b29 0%, #161b29 100%);
             border-radius: 8px;
             padding: 20px;
-            height: 350px;
+            height: 400px;
             margin-bottom: 40px;
         }
 
@@ -391,39 +391,73 @@
 
         /* Ensure HOLDINGS table triggers scroll */
         .holdings-wrapper .custom-table {
-            min-width: 1400px;
+            min-width: 1200px;
             /* Reduced to ensure natural scroll feeling */
             border-collapse: collapse;
-            /* Revert to collapse for cleaner look if not sticky */
             border-spacing: 0;
+            table-layout: fixed;
+            /* Fix column widths for alignment */
         }
 
-        /* REMOVED Sticky Name Column */
+        /* General Table Styling for Alignment (Applies to Watchlist too) */
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            /* Crucial for alignment */
+        }
+
+        /* 1. NAME Column - Big space & Aligned */
+        .custom-table th:first-child,
+        .custom-table td:first-child {
+            width: 350px;
+            /* Consistent wide width */
+            min-width: 350px;
+            max-width: 350px;
+            padding-left: 20px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 2. CURRENT PRICE Column - Centered & Aligned */
+        .custom-table th:nth-child(2),
+        .custom-table td:nth-child(2) {
+            width: 130px;
+            min-width: 130px;
+            text-align: center;
+            /* Centered as requested */
+            font-variant-numeric: tabular-nums;
+            padding-left: 20px;
+            /* Reduced offset */
+        }
+
+        /* 3. SUBSEQUENT COLUMNS - Tighter spacing & Centered */
+        .custom-table th:nth-child(n+3),
+        .custom-table td:nth-child(n+3) {
+            width: 120px;
+            /* Tighter width */
+            min-width: 120px;
+            padding: 1rem 0.5rem;
+            /* Reduced horizontal padding */
+            text-align: center;
+            /* Centered content */
+        }
+
+        /* Holdings Wrapper Override */
         .holdings-wrapper .custom-table th:first-child,
         .holdings-wrapper .custom-table td:first-child {
             position: static;
-            /* Reset to static so it moves */
             background-color: transparent;
             box-shadow: none;
             border-right: none;
-            padding-left: 20px;
-            width: 300px;
-            /* Kept wide but not excessive */
-            min-width: 300px;
         }
 
-        .holdings-wrapper .custom-table th:first-child {
-            background-color: transparent;
-        }
-
-        /* Space out the other columns in Holdings */
-        .holdings-wrapper .custom-table th,
-        .holdings-wrapper .custom-table td {
-            padding: 1rem 1.5rem;
+        /* General defaults */
+        .custom-table th,
+        .custom-table td {
             white-space: nowrap;
-            min-width: 150px;
-            /* Standard width */
-            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Reset table styles generally */
@@ -461,21 +495,36 @@
             </div>
         </nav>
 
-        <div class="portfolio-header">
-            <h1 class="portfolio-title" id="portfolioTitle">Portfolio Overview</h1>
-            <span class="portfolio-change" id="portfolioChange">-</span>
-        </div>
+        <div class="portfolio-controls" style="display: flex; flex-direction: column; gap: 30px; margin-bottom: 20px;">
+            <!-- Top Row: Title and Percentage -->
+            <div class="portfolio-top-row" style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 class="portfolio-title" id="portfolioTitle" style="margin: 0; line-height: 1;">Personal Portfolio
+                </h1>
+                <span class="portfolio-change" id="portfolioChange"
+                    style="font-size: 2.5rem; line-height: 1; font-weight: 500;">0.00%</span>
+            </div>
 
+            <!-- Bottom Row: Time Intervals and View Toggles -->
+            <div class="portfolio-bottom-row"
+                style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="time-intervals" id="portfolioTimeIntervals" style="margin-bottom: 0;">
+                    <span class="time-interval" data-period="1d">1d</span>
+                    <span class="time-interval active" data-period="5d">5d</span>
+                    <span class="time-interval" data-period="1mo">1m</span>
+                    <span class="time-interval" data-period="3mo">3m</span>
+                    <span class="time-interval" data-period="6mo">6m</span>
+                    <span class="time-interval" data-period="ytd">YTD</span>
+                    <span class="time-interval" data-period="1y">1Y</span>
+                </div>
 
-        <div class="time-wrapper">
-            <div class="time-intervals">
-                <span class="time-interval">1d</span>
-                <span class="time-interval">5d</span>
-                <span class="time-interval">1m</span>
-                <span class="time-interval">3m</span>
-                <span class="time-interval">6m</span>
-                <span class="time-interval">YTD</span>
-                <span class="time-interval active">1Y</span>
+                <!-- View Toggle Buttons -->
+                <div class="view-toggles"
+                    style="background: rgba(255, 255, 255, 0.05); padding: 4px; border-radius: 6px; display: flex;">
+                    <button class="toggle-btn active"
+                        style="background: rgba(255, 255, 255, 0.1); border: none; color: #e5e7eb; padding: 6px 16px; border-radius: 4px; font-size: 0.75rem; font-weight: 500; cursor: default;">Portfolio</button>
+                    <button class="toggle-btn"
+                        style="background: transparent; border: none; color: #6b7280; padding: 6px 16px; border-radius: 4px; font-size: 0.75rem; font-weight: 500; cursor: pointer;">Holdings</button>
+                </div>
             </div>
         </div>
 
@@ -504,26 +553,26 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th style="width: 25%" class="sortable" data-sort="name">
+                        <th class="sortable" data-sort="name">
                             <div class="sort-container" style="justify-content: flex-start;">Name <span
                                     class="sort-icon"></span></div>
                         </th>
-                        <th style="width: 12%">
+                        <th>
                             <div class="sort-container">Current Price</div>
                         </th>
-                        <th style="width: 12%" class="sortable" data-sort="weight">
+                        <th class="sortable" data-sort="weight">
                             <div class="sort-container">Portfolio Weight <span class="sort-icon"></span></div>
                         </th>
-                        <th style="width: 12%">
+                        <th>
                             <div class="sort-container">Target Price</div>
                         </th>
-                        <th style="width: 12%" class="sortable" data-sort="week_change">
+                        <th class="sortable" data-sort="week_change">
                             <div class="sort-container">Week % <span class="sort-icon"></span></div>
                         </th>
-                        <th style="width: 12%" class="sortable" data-sort="forward_pe">
+                        <th class="sortable" data-sort="forward_pe">
                             <div class="sort-container">Forward P/E <span class="sort-icon"></span></div>
                         </th>
-                        <th style="width: 12%" class="sortable" data-sort="beta">
+                        <th class="sortable" data-sort="beta">
                             <div class="sort-container">Beta <span class="sort-icon"></span></div>
                         </th>
                     </tr>
@@ -545,27 +594,25 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th style="width: 30%" class="sortable" data-sort="name">
-                            <div class="sort-container" style="justify-content: flex-start;">Name <span
+                        <th class="sortable" data-sort="name">
+                            <div class="sort-container" style="justify-content: flex-start;">Asset <span
                                     class="sort-icon"></span></div>
                         </th>
-                        <th>
-                            <div class="sort-container">Current Price</div>
+                        <th class="sortable" data-sort="current_price">
+                            <div class="sort-container">Price <span class="sort-icon"></span></div>
                         </th>
                         <th class="sortable" data-sort="forward_pe">
-                            <div class="sort-container">Forward P/E <span class="sort-icon"></span></div>
+                            <div class="sort-container">PE <span class="sort-icon"></span></div>
                         </th>
                         <th class="sortable" data-sort="beta">
                             <div class="sort-container">Beta <span class="sort-icon"></span></div>
                         </th>
-
                         <th class="sortable" data-sort="week_change">
                             <div class="sort-container">Week % <span class="sort-icon"></span></div>
                         </th>
                     </tr>
                 </thead>
                 <tbody id="watchlistBody">
-
                 </tbody>
 
             </table>
@@ -574,65 +621,14 @@
     </div>
 
     <script>
-        // Placeholder Chart (mimicking the image look roughly)
-        const ctx = document.getElementById('portfolioChart').getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(0, 227, 150, 0.4)');
-        gradient.addColorStop(1, 'rgba(0, 227, 150, 0.0)');
-
-        const portfolioChart = new Chart(ctx, {
-            type: 'bar', // Using bar to mimic the "EQ Weighted" look in image, although image looks like mixed or stacked area
-            data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                datasets: [{
-                    label: 'Portfolio Value',
-                    data: [10000, 10500, 10200, 10800, 11500, 11200, 12100, 12500, 12300, 12800, 13100, 13500],
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Faint bars
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    borderWidth: 0,
-                    categoryPercentage: 1.0,
-                    barPercentage: 1.0 // Make them wide like a histogram/area
-                }, {
-                    label: 'Gains',
-                    data: [0, 500, 200, 800, 1500, 1200, 2100, 2500, 2300, 2800, 3100, 3500],
-                    type: 'line',
-                    borderColor: '#00E396',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0.1,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                        },
-                        ticks: {
-                            color: '#6b7280'
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                        },
-                        ticks: {
-                            color: '#6b7280'
-                        }
-                    }
-                }
-            }
-        });
+        // Placeholder or simple interaction scripts if needed
+        // Chart rendering is handled by app.js with real data
     </script>
-    <script src="app.js?v=21"></script>
+    <script src="app.js?v=26"></script>
+
+
+
+
 
 
 

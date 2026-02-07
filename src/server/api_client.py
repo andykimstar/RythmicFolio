@@ -224,7 +224,15 @@ class StockDataService:
             week_change_percent = (week_change / week_start_price) * 100 if week_start_price else 0
 
             mkt_cap = self._get_info(ticker, 'marketCap', default='-')
-            forward_pe = self._get_info(ticker, 'forwardPE', default='-')
+            forward_pe = self._get_info(ticker, 'forwardPE', default=None)
+            trailing_pe = self._get_info(ticker, 'trailingPE', default=None)
+            
+            # Use trailing PE as the primary "PE Ratio", fallback to forward if trailing is missing
+            pe_ratio = trailing_pe if trailing_pe else forward_pe
+            if pe_ratio is None: pe_ratio = '-'
+
+            if forward_pe is None: forward_pe = '-' # Reset to dash for display if still None
+
             trail_eps = self._get_info(ticker, 'trailingEps', default='-')
             beta = self._get_info(ticker, 'beta', default='-')
 
@@ -262,6 +270,7 @@ class StockDataService:
                 "dividends": safe_round(float(last_quote['Dividends'])),
                 "market_cap": mkt_cap,
                 "forward_pe": safe_round(forward_pe),
+                "pe_ratio": safe_round(pe_ratio), # Explicitly return pe_ratio for frontend
                 "eps": safe_round(trail_eps),
                 "beta": safe_round(beta),
                 "date": str(last_quote.name.date())
@@ -279,11 +288,13 @@ class StockDataService:
             ticker = yf.Ticker(symbol)
             
             # Determine interval based on period
-            interval = "1d"
-            if period in ["1d", "5d"]:
+            interval = "1d" # default
+            if period == "1d":
+                interval = "5m" # More granular for 1 day
+            elif period == "5d":
                 interval = "15m"
             elif period == "1mo":
-                interval = "90m"
+                interval = "1d" # Daily is cleaner for 1 month
                 
             history = ticker.history(period=period, interval=interval)
             
@@ -295,10 +306,11 @@ class StockDataService:
             chart_data = []
             for date, row in history.iterrows():
                 # Format date depending on interval
-                if interval in ["1d", "5d", "1wk", "1mo", "3mo"]:
-                    date_str = date.strftime('%Y-%m-%d')
+                # If interval is minutes/hours, include time. Otherwise date only.
+                if "m" in interval or "h" in interval:
+                     date_str = date.strftime('%Y-%m-%d %H:%M')
                 else:
-                    date_str = date.strftime('%Y-%m-%d %H:%M')
+                     date_str = date.strftime('%Y-%m-%d')
 
                 chart_data.append({
                     "date": date_str,
@@ -323,6 +335,75 @@ class StockDataService:
             if data:
                 results[symbol] = data
         return results
+
+    def get_portfolio_history(self, holdings, period="5d"):
+        """
+        Calculate the normalized weighted performance of the portfolio over the specified period.
+        holdings: List of dicts with 'symbol' and 'weight' (0-100).
+        period: Timeframe (1d, 5d, 1mo, 3mo, 6mo, ytd, 1y).
+        """
+        try:
+            # 1. Determine Interval
+            interval = "1d"
+            date_format = '%Y-%m-%d'
+            
+            if period == "1d":
+                interval = "5m"
+                date_format = '%Y-%m-%d %H:%M'
+            elif period == "5d":
+                interval = "15m"
+                date_format = '%Y-%m-%d %H:%M'
+            
+            # 2. Fetch history for all symbols
+            series_list = []
+            
+            for h in holdings:
+                sym = h['symbol']
+                weight = h['weight']
+                ticker = yf.Ticker(sym)
+                df = ticker.history(period=period, interval=interval)
+                
+                if not df.empty:
+                    # Normalize to % change from start
+                    start_price = df['Close'].iloc[0]
+                    # Avoid division by zero
+                    if start_price == 0: start_price = 1
+
+                    # calculate percent change series
+                    pct_series = ((df['Close'] - start_price) / start_price) * 100
+                    
+                    # Apply weight immediately
+                    weighted_series = pct_series * (weight / 100.0)
+                    weighted_series.name = sym
+                    series_list.append(weighted_series)
+
+            if not series_list:
+                return []
+
+            # 3. Align Dates using Pandas (robust concat)
+            # Concatenate all series on the index (Date)
+            portfolio_df = pd.concat(series_list, axis=1)
+            
+            # Forward fill missing data (if one stock has a gap but others don't)
+            # Then backward fill for any start gaps
+            portfolio_df = portfolio_df.ffill().bfill()
+            
+            # Sum rows to get total weighted return
+            portfolio_df['total_return'] = portfolio_df.sum(axis=1)
+            
+            # 4. Convert to list of dicts
+            portfolio_data = []
+            for date, val in portfolio_df['total_return'].items():
+                portfolio_data.append({
+                    "date": date.strftime(date_format),
+                    "value": round(val, 2)
+                })
+
+            return portfolio_data
+
+        except Exception as e:
+            print(f"Error calculating portfolio history: {e}")
+            return []
 
 if __name__ == "__main__":
     service = StockDataService()

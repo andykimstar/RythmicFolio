@@ -193,9 +193,17 @@ def get_holdings():
 
             filtered_holdings.append(clean_holding)
 
+        # 3. Calculate Portfolio History Chart Data
+        # Collect symbols and weights for the chart service
+        chart_holdings = [{'symbol': h['symbol'], 'weight': h['weight']} for h in filtered_holdings if h['weight'] > 0]
+        
+        # Get period from request, default to 5d
+        period = request.args.get('period', '5d')
+        portfolio_chart = stock_service.get_portfolio_history(chart_holdings, period=period)
 
         return jsonify({
-            "holdings": filtered_holdings
+            "holdings": filtered_holdings,
+            "chart_data": portfolio_chart
             # total_value is EXPLICITLY removed for privacy
         })
 

@@ -153,9 +153,7 @@ async function fetchStockData(symbol, period = '1d') {
 
         if (historyRes.ok) {
             historyData = await historyRes.json();
-            if (!historyData.error) {
-                renderChart(historyData, symbolClean);
-            }
+            // Moved renderChart call down to pass color
         }
 
         if (statsRes.ok) {
@@ -164,6 +162,25 @@ async function fetchStockData(symbol, period = '1d') {
 
         if (quoteData && !quoteData.error) {
             updateHeaderInfo(quoteData, historyData, period);
+
+            // Determine Chart Color from Change Logic
+            let isPositiveChange = true;
+            if (period !== '1d' && historyData && historyData.length > 0) {
+                const startPrice = parseFloat(historyData[0].close);
+                const currentPrice = parseFloat(quoteData.price);
+                const change = currentPrice - startPrice;
+                isPositiveChange = change >= 0;
+            } else {
+                // Fallback to daily change
+                const changeVal = parseFloat(quoteData.change);
+                isPositiveChange = changeVal >= 0;
+            }
+            const chartColor = isPositiveChange ? '#00E396' : '#ff4560';
+
+            if (historyData && !historyData.error) {
+                renderChart(historyData, symbolClean, chartColor);
+            }
+
         } else if (!quoteData && errorOccurred) {
             // Show error if quote failed explicitly
             document.getElementById('companyName').innerText = `Error: ${errorOccurred}`;
@@ -768,7 +785,7 @@ function updateHeaderInfo(data, historyBox, period) {
     }
 }
 
-function renderChart(data, symbol) {
+function renderChart(data, symbol, colorOverride = null) {
     const ctx = document.getElementById('stockChart').getContext('2d');
     const labels = data.map(d => d.date);
     const prices = data.map(d => d.close);
@@ -777,9 +794,29 @@ function renderChart(data, symbol) {
         stockChart.destroy();
     }
 
+    // Determine color based on price change or override
+    let chartColor;
+    if (colorOverride) {
+        chartColor = colorOverride;
+    } else {
+        const startPrice = prices[0];
+        const endPrice = prices[prices.length - 1];
+        const isPositive = endPrice >= startPrice;
+        chartColor = isPositive ? '#00E396' : '#ff4560';
+    }
+
+    // Create gradient with dynamic color
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(0, 227, 150, 0.2)'); // matching green accent
-    gradient.addColorStop(1, 'rgba(0, 227, 150, 0)');
+    // Convert hex to rgba for gradient
+    const hexToRgba = (hex, alpha) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    gradient.addColorStop(0, hexToRgba(chartColor, 0.2));
+    gradient.addColorStop(1, hexToRgba(chartColor, 0));
 
     stockChart = new Chart(ctx, {
         type: 'line',
@@ -788,8 +825,8 @@ function renderChart(data, symbol) {
             datasets: [{
                 label: 'Price',
                 data: prices,
-                borderColor: '#00E396',
-                backgroundColor: gradient,
+                borderColor: chartColor, // Dynamic Color
+                backgroundColor: gradient, // Dynamic Gradient
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHoverRadius: 6,
@@ -1048,12 +1085,12 @@ function renderHoldingsTable() {
     });
 }
 
+
 async function fetchHoldings() {
     const holdingsBody = document.getElementById('holdingsBody');
     if (!holdingsBody) return;
 
     const searchInput = document.getElementById('searchInput');
-
 
     // Loading State
     document.body.style.cursor = 'wait';
@@ -1072,46 +1109,379 @@ async function fetchHoldings() {
 
         // Update Portfolio Header
         const portfolioTitle = document.getElementById('portfolioTitle');
-        if (portfolioTitle) {
-            portfolioTitle.textContent = `Portfolio Overview`;
+        if (portfolioTitle) portfolioTitle.textContent = `Personal Portfolio`;
+
+        // Render Portfolio Chart
+        if (data.chart_data && data.chart_data.length > 0) {
+            renderPortfolioChart(data.chart_data);
         }
 
-        renderHoldingsTable();
+        // Setup Intervals
+        setupPortfolioIntervals();
 
-        // Add sorting listeners once
-        // Ensure we only select headers within the holdings table
-        const table = holdingsBody.closest('table');
-        if (table) {
-            const headers = table.querySelectorAll('.sortable');
-            headers.forEach(header => {
-                header.onclick = () => {
-                    const key = header.getAttribute('data-sort');
-                    if (sortConfig.key === key) {
-                        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        sortConfig.key = key;
-                        sortConfig.direction = 'asc';
-                    }
-                    renderHoldingsTable();
-                };
-            });
-        }
+        // Render Table
+        renderHoldingsTable(allHoldings);
 
     } catch (error) {
-        console.error('Error loading holdings:', error);
-        holdingsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--accent-red); padding: 40px;">Error: ${error.message}</td></tr>`;
+        console.error('Error fetching holdings:', error);
+        holdingsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: #ff4560; padding: 20px;">Error loading holdings. Please try again.</td></tr>`;
     } finally {
-
         document.body.style.cursor = 'default';
         if (searchInput) {
             searchInput.disabled = false;
             searchInput.placeholder = "Search Stocks ...";
         }
     }
+}
 
-    // Explicitly call fetchWatchlist after holdings start (or in parallel)
-    fetchWatchlist();
+function renderHoldingsTable(holdings) {
+    const tbody = document.getElementById('holdingsBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!holdings || holdings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No holdings found.</td></tr>';
+        return;
+    }
+
+    holdings.forEach(h => {
+        const tr = document.createElement('tr');
+        const changeClass = (h.week_change >= 0) ? 'positive' : 'negative';
+        const changeColor = (h.week_change >= 0) ? '#00E396' : '#ff4560';
+        const changeSign = (h.week_change >= 0) ? '+' : '';
+        const price = h.current_price !== '-' ? '$' + parseFloat(h.current_price).toFixed(2) : '-';
+
+        tr.innerHTML = `
+            <td class="symbol-cell">
+                <div class="logo-box" style="background-color: ${h.color || '#333'}">${h.symbol[0]}</div>
+                <div>
+                    <div style="font-weight:bold;">${h.symbol}</div>
+                    <div style="font-size:0.8em; color:var(--text-muted);">${h.name}</div>
+                </div>
+            </td>
+            <td>${price}</td>
+            <td style="color: ${changeColor}">${changeSign}${h.week_change}%</td>
+            <td>${h.weight}%</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 
+function setupPortfolioIntervals() {
+    const container = document.getElementById('portfolioTimeIntervals');
+    if (!container) return;
 
+    const intervals = container.querySelectorAll('.time-interval');
+    intervals.forEach(span => {
+        span.onclick = () => {
+            // UI toggle
+            intervals.forEach(i => i.classList.remove('active'));
+            span.classList.add('active');
+
+            // Fetch
+            const period = span.getAttribute('data-period');
+            updatePortfolioChart(period);
+        };
+    });
+}
+
+async function updatePortfolioChart(period) {
+    try {
+        // Optional: Add loading indicator on chart canvas
+        const response = await fetch(`${API_BASE_URL}/api/holdings?period=${period}`);
+        if (!response.ok) throw new Error('Failed to fetch chart data');
+
+        const data = await response.json();
+        if (data.chart_data && data.chart_data.length > 0) {
+            renderPortfolioChart(data.chart_data);
+        }
+    } catch (error) {
+        console.error('Error updating portfolio chart:', error);
+    }
+}
+
+let portfolioChartInstance = null;
+
+function renderPortfolioChart(data) {
+    const ctx = document.getElementById('portfolioChart');
+    if (!ctx) return;
+
+    const context = ctx.getContext('2d');
+    const labels = data.map(d => d.date);
+    const values = data.map(d => d.value);
+
+    if (portfolioChartInstance) {
+        portfolioChartInstance.destroy();
+    }
+
+    // Determine color based on trend (First vs Last)
+    const startVal = values[0];
+    const endVal = values[values.length - 1];
+
+    // Calculate total change
+    const totalChange = endVal;
+
+    // Safety check for NaN
+    const displayChange = isNaN(totalChange) ? 0 : totalChange;
+
+    const isPositive = displayChange >= 0;
+    const chartColor = isPositive ? '#00E396' : '#ff4560';
+
+    // Update Portfolio Change Text
+    const changeElement = document.getElementById('portfolioChange');
+    if (changeElement) {
+        const sign = isPositive ? '+' : '';
+        changeElement.textContent = `${sign}${displayChange.toFixed(2)}%`;
+        changeElement.style.color = chartColor;
+    }
+
+    // Create gradient
+    const gradient = context.createLinearGradient(0, 0, 0, 400);
+    const hexToRgba = (hex, alpha) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+    gradient.addColorStop(0, hexToRgba(chartColor, 0.2));
+    gradient.addColorStop(1, hexToRgba(chartColor, 0));
+
+    portfolioChartInstance = new Chart(context, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cumulative Return',
+                data: values,
+                borderColor: chartColor,
+                backgroundColor: gradient,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: '#1e2433',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#333',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function (context) {
+                            return 'Return: ' + context.parsed.y.toFixed(2) + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    grid: { display: false, drawBorder: false },
+                    ticks: { color: '#6b7280', maxTicksLimit: 6, maxRotation: 0 }
+                },
+                y: {
+                    display: true,
+                    position: 'right',
+                    grid: { color: '#374151', drawBorder: false },
+                    ticks: {
+                        color: '#6b7280',
+                        callback: function (value) { return value.toFixed(1) + '%'; }
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+    const labels = data.map(d => d.date);
+            const values = data.map(d => d.value);
+
+            if(portfolioChartInstance) {
+                portfolioChartInstance.destroy();
+            }
+
+    // Determine color based on trend (First vs Last)
+    const startVal = values[0];
+            const endVal = values[values.length - 1];
+
+            // Calculate total change
+            const totalChange = endVal;
+
+            // Safety check for NaN
+            const displayChange = isNaN(totalChange) ? 0 : totalChange;
+
+            const isPositive = displayChange >= 0;
+            const chartColor = isPositive ? '#00E396' : '#ff4560';
+
+            // Update Portfolio Change Text
+            const changeElement = document.getElementById('portfolioChange');
+            if(changeElement) {
+                const sign = isPositive ? '+' : '';
+                changeElement.textContent = `${sign}${displayChange.toFixed(2)} % `;
+                changeElement.style.color = chartColor;
+            }
+
+    // Create gradient
+    const gradient = context.createLinearGradient(0, 0, 0, 400);
+            const hexToRgba = (hex, alpha) => {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            };
+            gradient.addColorStop(0, hexToRgba(chartColor, 0.2));
+            gradient.addColorStop(1, hexToRgba(chartColor, 0));
+
+            portfolioChartInstance = new Chart(context, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative Return',
+                        data: values,
+                        borderColor: chartColor,
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e2433',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function (context) {
+                                    return 'Return: ' + context.parsed.y.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#6b7280', maxTicksLimit: 6, maxRotation: 0 }
+                        },
+                        y: {
+                            display: true,
+                            position: 'right',
+                            grid: { color: '#374151', drawBorder: false },
+                            ticks: {
+                                color: '#6b7280',
+                                callback: function (value) { return value.toFixed(1) + '%'; }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+
+async function fetchWatchlist() {
+        const watchlistBody = document.getElementById('watchlistBody');
+        if(!watchlistBody) return;
+
+        // Simple checks
+        if(watchlistBody.children.length === 0) {
+        watchlistBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 20px;">Loading Watchlist...</td></tr>';
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL} / api / watchlist`);
+        if (!response.ok) throw new Error('Failed to fetch watchlist');
+
+        const data = await response.json();
+        const watchlist = data.watchlist || [];
+
+        watchlistBody.innerHTML = '';
+        if (watchlist.length === 0) {
+            watchlistBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Your watchlist is empty.</td></tr>';
+            return;
+        }
+
+        watchlist.forEach(item => {
+            const tr = document.createElement('tr');
+            const price = item.current_price ? `$${parseFloat(item.current_price).toFixed(2)
+                } ` : '-';
+            const change = parseFloat(item.change || 0);
+            const changeColor = change >= 0 ? '#00E396' : '#ff4560';
+            const changeSign = change >= 0 ? '+' : '';
+
+            tr.innerHTML = `
+    < td class="symbol-cell" >
+                    <div class="logo-box" style="background-color: #333">${item.symbol[0]}</div>
+                    <div>
+                        <div style="font-weight:bold;">${item.symbol}</div>
+                        <div style="font-size:0.8em; color:var(--text-muted);">${item.name || ''}</div>
+                    </div>
+                </td >
+                <td>${price}</td>
+                <td style="color: ${changeColor}">${changeSign}${change.toFixed(2)}%</td>
+                <td><button class="btn-icon delete-btn" style="background:transparent; border:none; color:#ea4335; cursor:pointer;" onclick="removeFromWatchlist('${item.symbol}')"><i class="fas fa-trash"></i></button></td>
+`;
+            watchlistBody.appendChild(tr);
+        });
+
+    } catch (error) {
+        console.error('Error fetching watchlist:', error);
+        watchlistBody.innerHTML = `< tr > <td colspan="5" style="text-align:center; color: #ff4560; padding: 20px;">Error loading watchlist.</td></tr > `;
+    }
+}
+
+async function removeFromWatchlist(symbol) {
+    if (!confirm(`Remove ${symbol} from watchlist ? `)) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL} /api/watchlist ? symbol = ${symbol} `, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            fetchWatchlist();
+        } else {
+            alert('Failed to remove stock');
+        }
+    } catch (error) {
+        console.error('Error removing from watchlist:', error);
+    }
+}
+
+// Initialization and Refresh
+document.addEventListener('DOMContentLoaded', () => {
+    fetchHoldings();
+    fetchWatchlist();
+
+    setInterval(() => {
+        fetchHoldings();
+        fetchWatchlist();
+    }, 60000);
+});
+```
