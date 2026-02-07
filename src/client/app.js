@@ -902,12 +902,14 @@ function renderWatchlistTable() {
         tr.innerHTML = `
             <td>
                 <div class="asset-color-bar" style="background-color: ${stock.color || '#555'}"></div>
-                <div class="asset-info">
+                <div class="asset-info" style="cursor: pointer;" onclick="window.location.href='index.html?symbol=${stock.symbol}'">
                     <span class="asset-ticker">${stock.symbol}</span>
                     <span class="asset-name">${stock.name || stock.symbol}</span>
                 </div>
             </td>
             <td>${priceVal}</td>
+            <td>${stock.forward_pe !== undefined && stock.forward_pe !== null ? stock.forward_pe : "-"}</td>
+            <td>${stock.beta !== undefined && stock.beta !== null ? stock.beta : "-"}</td>
             <td class="${weekChangeClass}">${weekChangeVal}</td>
 
         `;
@@ -990,6 +992,11 @@ function renderHoldingsTable() {
             return 0;
         }
 
+        // Check if the value is numeric (remove %, $ symbols for correct sorting)
+        if (['weight', 'week_change', 'market_cap', 'pe_ratio', 'current_price', 'target_price', 'forward_pe', 'beta'].includes(sortConfig.key)) {
+            valA = parseFloat(String(valA).replace(/[^0-9.-]/g, ''));
+            valB = parseFloat(String(valB).replace(/[^0-9.-]/g, ''));
+        }
         // Handle numeric sorting for others (weight, current_price, etc.)
         valA = parseFloat(valA) || 0;
         valB = parseFloat(valB) || 0;
@@ -1013,7 +1020,7 @@ function renderHoldingsTable() {
         tr.innerHTML = `
             <td>
                 <div class="asset-color-bar" style="background-color: ${stock.color || '#555'}"></div>
-                <div class="asset-info">
+                <div class="asset-info" style="cursor: pointer;" onclick="window.location.href='index.html?symbol=${stock.symbol}'">
                     <span class="asset-ticker">${stock.symbol}</span>
                     <span class="asset-name">${stock.name || stock.symbol}</span>
                 </div>
@@ -1022,6 +1029,8 @@ function renderHoldingsTable() {
             <td>${weightVal}</td>
             <td>$${stock.target_price || "-"}</td>
             <td class="${weekChangeClass}">${weekChangeVal}</td>
+            <td>${stock.forward_pe !== undefined && stock.forward_pe !== null ? stock.forward_pe : "-"}</td>
+            <td>${stock.beta !== undefined && stock.beta !== null ? stock.beta : "-"}</td>
         `;
 
         holdingsBody.appendChild(tr);

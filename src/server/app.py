@@ -132,15 +132,21 @@ def get_holdings():
                     data['current_price'] = quote['price']
                     data['name'] = data.get('company name', quote.get('company_name', ticker_symbol))
                     data['week_change'] = quote.get('week_change_percent', 0)
+                    data['forward_pe'] = quote.get('forward_pe', "-")
+                    data['beta'] = quote.get('beta', "-")
                 else:
                     data['current_price'] = "-"
                     data['name'] = data.get('company name', ticker_symbol)
                     data['week_change'] = 0
+                    data['forward_pe'] = "-"
+                    data['beta'] = "-"
             except Exception as e:
                 print(f"Error fetching quote for {ticker_symbol}: {e}")
                 data['current_price'] = "-"
                 data['name'] = data.get('company name', ticker_symbol)
                 data['week_change'] = 0
+                data['forward_pe'] = "-"
+                data['beta'] = "-"
 
             data['symbol'] = ticker_symbol
             
@@ -180,8 +186,11 @@ def get_holdings():
                 "weight": holding.get('weight'),
                 "target_price": holding.get('target_price'),
                 "week_change": holding.get('week_change'),
+                "forward_pe": holding.get('forward_pe'),
+                "beta": holding.get('beta'),
                 "color": holding.get('color')
             }
+
             filtered_holdings.append(clean_holding)
 
 
@@ -189,8 +198,6 @@ def get_holdings():
             "holdings": filtered_holdings
             # total_value is EXPLICITLY removed for privacy
         })
-
-
 
     except Exception as e:
         import traceback
@@ -230,15 +237,21 @@ def get_watchlist():
                     data['current_price'] = quote['price']
                     data['name'] = data.get('company name', quote.get('company_name', ticker_symbol))
                     data['week_change'] = quote.get('week_change_percent', 0)
+                    data['forward_pe'] = quote.get('forward_pe', "-")
+                    data['beta'] = quote.get('beta', "-")
                 else:
                     data['current_price'] = "-"
                     data['name'] = data.get('company name', ticker_symbol)
                     data['week_change'] = 0
+                    data['forward_pe'] = "-"
+                    data['beta'] = "-"
             except Exception as e:
                 print(f"Error fetching quote for {ticker_symbol}: {e}")
                 data['current_price'] = "-"
                 data['name'] = data.get('company name', ticker_symbol)
                 data['week_change'] = 0
+                data['forward_pe'] = "-"
+                data['beta'] = "-"
 
             data['symbol'] = ticker_symbol
             data['target_price'] = data.get('target price', "-")
@@ -250,8 +263,12 @@ def get_watchlist():
                 "current_price": data.get('current_price'),
                 "target_price": data.get('target_price'),
                 "week_change": data.get('week_change'),
+                "forward_pe": data.get('forward_pe'),
+                "beta": data.get('beta'),
                 "color": data.get('color', '#555') # Default gray if no color
             }
+
+
             watchlist_items.append(clean_item)
 
         return jsonify({

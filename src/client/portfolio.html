@@ -314,53 +314,126 @@
             background-color: #6da36d;
         }
 
-        /* Greenish */
         .bar-amzn {
             background-color: #ff9900;
         }
 
-        /* Orange */
         .bar-googl {
             background-color: #fbbc05;
         }
 
-        /* Yellow */
         .bar-meta {
             background-color: #1877f2;
         }
 
-        /* Blue */
         .bar-nvo {
             background-color: #4b0082;
         }
-
-        /* Purple/Dark Blue */
 
         .bar-nflx {
             background-color: #E50914;
         }
 
-        /* Red */
         .bar-aapl {
             background-color: #A2AAAD;
         }
 
-        /* Grey/White */
         .bar-jpm {
             background-color: #005EB8;
         }
 
-        /* Blue */
         .bar-rklb {
             background-color: #333;
         }
 
-        /* Black/Dark */
         .bar-lly {
             background-color: #ffcccc;
         }
 
-        /* Pinkish */
+        /* --- NEW STYLES FOR HOLDINGS SCROLLBAR & TABLE LAYOUT --- */
+
+        /* Apply custom scroll ONLY to holdings-wrapper */
+        .holdings-wrapper {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #404040 transparent;
+        }
+
+        .holdings-wrapper::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+
+        .holdings-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+        }
+
+        .holdings-wrapper::-webkit-scrollbar-thumb {
+            background-color: #404040;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .holdings-wrapper::-webkit-scrollbar-button {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        .holdings-wrapper::-webkit-scrollbar-thumb:hover {
+            background-color: #666;
+        }
+
+        .holdings-wrapper::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+
+        /* Ensure HOLDINGS table triggers scroll */
+        .holdings-wrapper .custom-table {
+            min-width: 1400px;
+            /* Reduced to ensure natural scroll feeling */
+            border-collapse: collapse;
+            /* Revert to collapse for cleaner look if not sticky */
+            border-spacing: 0;
+        }
+
+        /* REMOVED Sticky Name Column */
+        .holdings-wrapper .custom-table th:first-child,
+        .holdings-wrapper .custom-table td:first-child {
+            position: static;
+            /* Reset to static so it moves */
+            background-color: transparent;
+            box-shadow: none;
+            border-right: none;
+            padding-left: 20px;
+            width: 300px;
+            /* Kept wide but not excessive */
+            min-width: 300px;
+        }
+
+        .holdings-wrapper .custom-table th:first-child {
+            background-color: transparent;
+        }
+
+        /* Space out the other columns in Holdings */
+        .holdings-wrapper .custom-table th,
+        .holdings-wrapper .custom-table td {
+            padding: 1rem 1.5rem;
+            white-space: nowrap;
+            min-width: 150px;
+            /* Standard width */
+            text-align: left;
+        }
+
+        /* Reset table styles generally */
+        .custom-table th {
+            text-align: left;
+        }
+
+        .custom-table td {
+            text-align: left;
+        }
     </style>
 </head>
 
@@ -427,25 +500,31 @@
 
         <!-- Holdings -->
         <h2 class="section-title">Holdings</h2>
-        <div class="table-section">
+        <div class="holdings-wrapper table-section">
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%" class="sortable" data-sort="name">
+                        <th style="width: 25%" class="sortable" data-sort="name">
                             <div class="sort-container" style="justify-content: flex-start;">Name <span
                                     class="sort-icon"></span></div>
                         </th>
-                        <th>
+                        <th style="width: 12%">
                             <div class="sort-container">Current Price</div>
                         </th>
-                        <th class="sortable" data-sort="weight">
+                        <th style="width: 12%" class="sortable" data-sort="weight">
                             <div class="sort-container">Portfolio Weight <span class="sort-icon"></span></div>
                         </th>
-                        <th>
+                        <th style="width: 12%">
                             <div class="sort-container">Target Price</div>
                         </th>
-                        <th class="sortable" data-sort="week_change">
+                        <th style="width: 12%" class="sortable" data-sort="week_change">
                             <div class="sort-container">Week % <span class="sort-icon"></span></div>
+                        </th>
+                        <th style="width: 12%" class="sortable" data-sort="forward_pe">
+                            <div class="sort-container">Forward P/E <span class="sort-icon"></span></div>
+                        </th>
+                        <th style="width: 12%" class="sortable" data-sort="beta">
+                            <div class="sort-container">Beta <span class="sort-icon"></span></div>
                         </th>
                     </tr>
                 </thead>
@@ -466,12 +545,18 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th style="width: 40%" class="sortable" data-sort="name">
+                        <th style="width: 30%" class="sortable" data-sort="name">
                             <div class="sort-container" style="justify-content: flex-start;">Name <span
                                     class="sort-icon"></span></div>
                         </th>
                         <th>
                             <div class="sort-container">Current Price</div>
+                        </th>
+                        <th class="sortable" data-sort="forward_pe">
+                            <div class="sort-container">Forward P/E <span class="sort-icon"></span></div>
+                        </th>
+                        <th class="sortable" data-sort="beta">
+                            <div class="sort-container">Beta <span class="sort-icon"></span></div>
                         </th>
 
                         <th class="sortable" data-sort="week_change">
@@ -547,7 +632,13 @@
             }
         });
     </script>
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=21"></script>
+
+
+
+
+
+
 
 
 

@@ -224,7 +224,7 @@ class StockDataService:
             week_change_percent = (week_change / week_start_price) * 100 if week_start_price else 0
 
             mkt_cap = self._get_info(ticker, 'marketCap', default='-')
-            trail_pe = self._get_info(ticker, 'trailingPE', default='-')
+            forward_pe = self._get_info(ticker, 'forwardPE', default='-')
             trail_eps = self._get_info(ticker, 'trailingEps', default='-')
             beta = self._get_info(ticker, 'beta', default='-')
 
@@ -261,7 +261,7 @@ class StockDataService:
                 "low": safe_round(float(last_quote['Low'])),
                 "dividends": safe_round(float(last_quote['Dividends'])),
                 "market_cap": mkt_cap,
-                "pe_ratio": safe_round(trail_pe),
+                "forward_pe": safe_round(forward_pe),
                 "eps": safe_round(trail_eps),
                 "beta": safe_round(beta),
                 "date": str(last_quote.name.date())
