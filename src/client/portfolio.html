@@ -555,7 +555,7 @@
         <!-- Holdings -->
         <h2 class="section-title">Holdings</h2>
         <div class="holdings-wrapper table-section">
-            <table class="custom-table">
+            <table class="custom-table" id="holdingsTable">
                 <thead>
                     <tr>
                         <th class="sortable" data-sort="name">
@@ -596,24 +596,24 @@
         <!-- Watch List -->
         <h2 class="section-title">Watch List</h2>
         <div class="table-section">
-            <table class="custom-table">
+            <table class="custom-table" id="watchlistTable">
                 <thead>
                     <tr>
                         <th class="sortable" data-sort="name">
                             <div class="sort-container" style="justify-content: flex-start;">Asset <span
                                     class="sort-icon"></span></div>
                         </th>
-                        <th class="sortable" data-sort="current_price">
-                            <div class="sort-container">Current Price <span class="sort-icon"></span></div>
-                        </th>
-                        <th class="sortable" data-sort="week_change">
-                            <div class="sort-container">Week % <span class="sort-icon"></span></div>
+                        <th>
+                            <div class="sort-container">Current Price</div>
                         </th>
                         <th class="sortable" data-sort="forward_pe">
                             <div class="sort-container">Forward P/E <span class="sort-icon"></span></div>
                         </th>
                         <th class="sortable" data-sort="beta">
                             <div class="sort-container">Beta <span class="sort-icon"></span></div>
+                        </th>
+                        <th class="sortable" data-sort="week_change">
+                            <div class="sort-container">Week % <span class="sort-icon"></span></div>
                         </th>
                         <th style="width: 50px;"></th> <!-- Action Header -->
                     </tr>
@@ -630,8 +630,8 @@
         // Placeholder or simple interaction scripts if needed
         // Chart rendering is handled by app.js with real data
     </script>
-    <script src="utils.js?v=4"></script>
-    <script src="portfolio.js?v=4"></script>
+    <script src="utils.js?v=8"></script>
+    <script src="portfolio.js?v=8"></script>
 
 
 

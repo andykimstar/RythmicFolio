@@ -116,24 +116,27 @@ function renderHoldingsTable(holdings) {
     });
 
     // Update Sort Icons
-    document.querySelectorAll('#holdingsTable .sortable').forEach(th => {
-        const icon = th.querySelector('.sort-icon');
-        const key = th.getAttribute('data-sort');
-        if (key === sortConfig.key) {
-            icon.textContent = sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
-        } else {
-            icon.textContent = '';
-        }
-        th.onclick = () => {
-            if (sortConfig.key === key) {
-                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    const table = document.getElementById('holdingsTable');
+    if (table) {
+        table.querySelectorAll('.sortable').forEach(th => {
+            const icon = th.querySelector('.sort-icon');
+            const key = th.getAttribute('data-sort');
+            if (key === sortConfig.key) {
+                icon.textContent = sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
             } else {
-                sortConfig.key = key;
-                sortConfig.direction = 'desc'; // Default desc for new columns often better for numbers
+                icon.textContent = '';
             }
-            renderHoldingsTable(allHoldings);
-        };
-    });
+            th.onclick = () => {
+                if (sortConfig.key === key) {
+                    sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortConfig.key = key;
+                    sortConfig.direction = 'asc';
+                }
+                renderHoldingsTable(allHoldings);
+            };
+        });
+    }
 }
 
 function setupPortfolioIntervals() {
@@ -175,10 +178,7 @@ function renderPortfolioChart(data) {
 
     const startVal = values[0];
     const endVal = values[values.length - 1];
-    const displayChange = isNaN(endVal) ? 0 : endVal; // Chart value is % return usually? Or value? Assuming Value or Return.
-    // If backend sends cumulative return %, then start is 0. If value, check diff.
-    // Based on previous code, data.value seems to be "Cumulative Return" in %, hence endVal is the total change?
-    // Let's assume consistent with previous logic.
+    const displayChange = isNaN(endVal) ? 0 : endVal;
 
     const isPositive = displayChange >= 0;
     const chartColor = isPositive ? '#00E396' : '#ff4560';
@@ -247,7 +247,7 @@ async function fetchWatchlist() {
     if (!watchlistBody) return;
 
     if (watchlistBody.children.length === 0) {
-        watchlistBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 20px;">Loading Watchlist...</td></tr>';
+        watchlistBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 20px;">Loading Watchlist...</td></tr>';
     }
 
     try {
@@ -260,7 +260,7 @@ async function fetchWatchlist() {
 
     } catch (error) {
         console.error('Error fetching watchlist:', error);
-        watchlistBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: #ff4560; padding: 20px;">Error loading watchlist.</td></tr>`;
+        watchlistBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: #ff4560; padding: 20px;">Error loading watchlist.</td></tr>`;
     }
 }
 
@@ -270,7 +270,7 @@ function renderWatchlistTable() {
     watchlistBody.innerHTML = '';
 
     if (allWatchlist.length === 0) {
-        watchlistBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Your watchlist is empty.</td></tr>';
+        watchlistBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">Your watchlist is empty.</td></tr>';
         return;
     }
 
@@ -284,8 +284,8 @@ function renderWatchlistTable() {
             if (valA > valB) return watchlistSortConfig.direction === 'asc' ? 1 : -1;
             return 0;
         }
-        valA = parseFloat(valA) || 0;
-        valB = parseFloat(valB) || 0;
+        valA = parseFloat(String(valA).replace(/[^0-9.-]/g, '')) || 0;
+        valB = parseFloat(String(valB).replace(/[^0-9.-]/g, '')) || 0;
         return watchlistSortConfig.direction === 'asc' ? valA - valB : valB - valA;
     });
 
@@ -305,29 +305,38 @@ function renderWatchlistTable() {
                     </div>
                 </td>
                 <td>${price}</td>
-                <td style="color: ${changeColor}">${changeSign}${change.toFixed(2)}%</td>
                 <td>${item.forward_pe || '-'}</td>
                 <td>${item.beta || '-'}</td>
+                <td style="color: ${changeColor}">${changeSign}${change.toFixed(2)}%</td>
                 <td><button class="btn-icon delete-btn" style="background:transparent; border:none; color:#ea4335; cursor:pointer;" onclick="removeFromWatchlist('${item.symbol}')"><i class="fas fa-trash"></i></button></td>
             `;
         watchlistBody.appendChild(tr);
     });
 
     // Update Headers
-    const table = watchlistBody.closest('table');
+    const table = document.getElementById('watchlistTable');
     if (table) {
         table.querySelectorAll('.sortable').forEach(header => {
+            const icon = header.querySelector('.sort-icon');
+            const key = header.getAttribute('data-sort');
+
+            if (icon) {
+                if (key === watchlistSortConfig.key) {
+                    icon.textContent = watchlistSortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+                } else {
+                    icon.textContent = '';
+                }
+            }
+
             header.onclick = () => {
-                const key = header.getAttribute('data-sort');
                 if (watchlistSortConfig.key === key) {
                     watchlistSortConfig.direction = watchlistSortConfig.direction === 'asc' ? 'desc' : 'asc';
                 } else {
                     watchlistSortConfig.key = key;
-                    watchlistSortConfig.direction = 'desc';
+                    watchlistSortConfig.direction = 'asc';
                 }
                 renderWatchlistTable();
             };
-            // Update icons omitted for brevity, logic remains same
         });
     }
 }
