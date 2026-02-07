@@ -409,45 +409,6 @@ h1 {
     border-bottom: none;
 }
 
-.symbol-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-}
-
-.logo-box {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: #252525;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.2rem;
-}
-
-.logo-box.apple {
-    background: #333;
-}
-
-.logo-box.tesla {
-    background: #E82127;
-}
-
-.logo-box.nvidia {
-    background: #76B900;
-}
-
-.logo-box.amazon {
-    background: #FF9900;
-    color: #000;
-}
-
-.logo-box.google {
-    background: #4285F4;
-}
 
 .ticker {
     font-weight: 700;
@@ -663,4 +624,18 @@ h1 {
     /* Force columns to be wide */
     text-align: left;
     /* Align text for better reading */
+}
+
+.asset-color-bar {
+    width: 6px;
+    height: 36px;
+    border-radius: 4px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.symbol-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
 }

@@ -256,8 +256,8 @@
 
 
         .custom-table td {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 20px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             vertical-align: middle;
             font-size: 0.95rem;
             text-align: center;
@@ -267,38 +267,45 @@
             text-align: left;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 0;
+            padding-left: 20px;
         }
 
         .custom-table tr:last-child td {
             border-bottom: none;
         }
 
-        /* Asset Color Bar */
+
+        /* Asset Color Bar - Thick version as per image */
         .asset-color-bar {
-            width: 6px;
-            height: 35px;
-            border-radius: 2px;
-            background-color: #555;
-            /* Default */
+            width: 14px;
+            height: 48px;
+            border-radius: 4px;
+            margin-right: 20px;
+            flex-shrink: 0;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
         }
 
         .asset-info {
             display: flex;
             flex-direction: column;
+            justify-content: center;
         }
 
         .asset-ticker {
             font-size: 0.75rem;
-            color: var(--text-muted);
+            color: #8b949e;
             text-transform: uppercase;
-            font-weight: 600;
+            font-weight: 500;
             margin-bottom: 2px;
+            display: block;
         }
 
         .asset-name {
-            font-size: 1rem;
-            color: var(--text-color);
+            font-size: 1.1rem;
+            color: #ffffff;
+            font-weight: 400;
+            display: block;
         }
 
         .text-green {
@@ -349,8 +356,6 @@
         .bar-lly {
             background-color: #ffcccc;
         }
-
-        /* --- NEW STYLES FOR HOLDINGS SCROLLBAR & TABLE LAYOUT --- */
 
         /* Apply custom scroll ONLY to holdings-wrapper */
         .holdings-wrapper {
@@ -491,7 +496,7 @@
 
             <!-- Right Group: Search (Outside the hover target) -->
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search Stocks ...">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search Stocks...">
             </div>
         </nav>
 
@@ -554,7 +559,7 @@
                 <thead>
                     <tr>
                         <th class="sortable" data-sort="name">
-                            <div class="sort-container" style="justify-content: flex-start;">Name <span
+                            <div class="sort-container" style="justify-content: flex-start;">Asset <span
                                     class="sort-icon"></span></div>
                         </th>
                         <th>
@@ -599,17 +604,18 @@
                                     class="sort-icon"></span></div>
                         </th>
                         <th class="sortable" data-sort="current_price">
-                            <div class="sort-container">Price <span class="sort-icon"></span></div>
-                        </th>
-                        <th class="sortable" data-sort="forward_pe">
-                            <div class="sort-container">PE <span class="sort-icon"></span></div>
-                        </th>
-                        <th class="sortable" data-sort="beta">
-                            <div class="sort-container">Beta <span class="sort-icon"></span></div>
+                            <div class="sort-container">Current Price <span class="sort-icon"></span></div>
                         </th>
                         <th class="sortable" data-sort="week_change">
                             <div class="sort-container">Week % <span class="sort-icon"></span></div>
                         </th>
+                        <th class="sortable" data-sort="forward_pe">
+                            <div class="sort-container">Forward P/E <span class="sort-icon"></span></div>
+                        </th>
+                        <th class="sortable" data-sort="beta">
+                            <div class="sort-container">Beta <span class="sort-icon"></span></div>
+                        </th>
+                        <th style="width: 50px;"></th> <!-- Action Header -->
                     </tr>
                 </thead>
                 <tbody id="watchlistBody">
@@ -624,7 +630,8 @@
         // Placeholder or simple interaction scripts if needed
         // Chart rendering is handled by app.js with real data
     </script>
-    <script src="app.js?v=26"></script>
+    <script src="utils.js?v=4"></script>
+    <script src="portfolio.js?v=4"></script>
 
 
 
