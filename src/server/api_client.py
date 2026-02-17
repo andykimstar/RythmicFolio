@@ -341,18 +341,70 @@ class StockDataService:
         """
         try:
             ticker = yf.Ticker(symbol)
-            df = ticker.earnings_history
+            
+            # Try earnings_history property first (legacy/compat)
+            df = None
+            try:
+                df = ticker.earnings_history
+            except:
+                pass
+
+            # Fallback to earnings_dates (newer yfinance)
+            if df is None or df.empty:
+                try:
+                    df = ticker.earnings_dates
+                    if df is not None and not df.empty:
+                        # Only take past dates for history? 
+                        # Actually earnings_dates includes future. 
+                        # We can filter or let frontend handle.
+                        # But frontend expects historical list.
+                        # Sorting by date descending usually.
+                        pass
+                except:
+                    pass
+
             if df is not None and not df.empty:
                 # Convert index (dates) to string and columns to dict
                 df = df.reset_index()
-                # Rename the index column if it's named 'index' or similar
-                if 'index' in df.columns:
-                    df = df.rename(columns={'index': 'date'})
-                # If the first column is a datetime, format it
-                for col in df.columns:
-                    if pd.api.types.is_datetime64_any_dtype(df[col]):
-                        df[col] = df[col].dt.strftime('%Y-%m-%d')
                 
+                # Standardize Date Column
+                # Could be 'index' (from reset_index on named index), 'Date', 'Earnings Date'
+                date_col = None
+                for col in df.columns:
+                    c_lower = str(col).lower()
+                    if 'date' in c_lower or col == 'index':
+                        date_col = col
+                        break
+                
+                if date_col:
+                    df = df.rename(columns={date_col: 'date'})
+                else:
+                    # Fallback: assume first column is date if it looks like it
+                    df = df.rename(columns={df.columns[0]: 'date'})
+
+                # Rename columns to match frontend expectations camelCase
+                # Standard yfinance columns: "EPS Estimate", "Reported EPS", "Surprise(%)"
+                rename_map = {
+                    'EPS Estimate': 'epsEstimate',
+                    'Reported EPS': 'epsActual',
+                    'Surprise(%)': 'surprise',
+                    'Surprise': 'surprise'
+                }
+                df = df.rename(columns=rename_map)
+
+                # Format Date
+                if 'date' in df.columns:
+                    if pd.api.types.is_datetime64_any_dtype(df['date']):
+                        df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+                
+                # Filter rows where epsActual is present (for history chart)
+                # But frontend handles future/past. 
+                # Ideally we return all. 
+                # Note: valid records should have at least epsEstimate or epsActual
+                
+                # Replace NaN with None for JSON serialization
+                df = df.where(pd.notnull(df), None)
+
                 return df.to_dict(orient='records')
             return []
         except Exception as e:

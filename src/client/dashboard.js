@@ -120,17 +120,22 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
 
         // Parallel Requests
         // Note: API_BASE_URL comes from utils.js
+        const commonOptions = {
+            headers: { 'X-Recaptcha-Token': token },
+            cache: 'no-store'
+        };
+
         const endpoints = [
-            { id: 'quote', url: `${API_BASE_URL}/api/quote/${symbolClean}`, options: { headers: { 'X-Recaptcha-Token': token } } },
-            { id: 'history', url: `${API_BASE_URL}/api/history/${symbolClean}?period=${period}` }
+            { id: 'quote', url: `${API_BASE_URL}/api/quote/${symbolClean}`, options: commonOptions },
+            { id: 'history', url: `${API_BASE_URL}/api/history/${symbolClean}?period=${period}`, options: commonOptions }
         ];
 
         // Only fetch statistics and heavy data if NOT a background refresh
         if (!isRefresh) {
-            endpoints.push({ id: 'stats', url: `${API_BASE_URL}/api/statistics/${symbolClean}` });
-            endpoints.push({ id: 'earnings', url: `${API_BASE_URL}/api/earnings/${symbolClean}` });
-            endpoints.push({ id: 'rec', url: `${API_BASE_URL}/api/recommendation/${symbolClean}` });
-            endpoints.push({ id: 'cal', url: `${API_BASE_URL}/api/calendar/${symbolClean}` });
+            endpoints.push({ id: 'stats', url: `${API_BASE_URL}/api/statistics/${symbolClean}`, options: commonOptions });
+            endpoints.push({ id: 'earnings', url: `${API_BASE_URL}/api/earnings/${symbolClean}`, options: commonOptions });
+            endpoints.push({ id: 'rec', url: `${API_BASE_URL}/api/recommendation/${symbolClean}`, options: commonOptions });
+            endpoints.push({ id: 'cal', url: `${API_BASE_URL}/api/calendar/${symbolClean}`, options: commonOptions });
         }
 
         const responses = await Promise.all(
@@ -141,7 +146,7 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
             const { id, res } = item;
             if (res.ok) {
                 const json = await res.json();
-                if (id === 'quote') quoteData = json;
+                if (id === 'quote') { quoteData = json; window.quoteData = json; }
                 if (id === 'history') historyData = json;
                 if (id === 'stats') statisticsData = json;
                 if (id === 'earnings') earningsData = json;
@@ -368,132 +373,466 @@ function renderRecommendationChart(data) {
     });
 }
 
+// Update Earnings UI - Main Coordinator
 function updateEarningsUI(earnings, calendar) {
-    if (!earnings || !earnings.length) return;
-
-    // 1. EPS Chart
-    const epsCanvas = document.getElementById('chartEPS');
-    if (epsCanvas) {
-        const ctx = epsCanvas.getContext('2d');
-        if (financialChartInstances.EPS) financialChartInstances.EPS.destroy();
-
-        // Use last 4-5 quarters
-        const recent = earnings.slice(0, 5).reverse();
-        const labels = recent.map(d => {
-            const date = new Date(d.date);
-            const m = date.getMonth();
-            const y = date.getFullYear();
-            const q = Math.ceil((m + 1) / 3);
-            return `Q${q} ${y}`;
-        });
-
-        financialChartInstances.EPS = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Estimated',
-                        data: recent.map(d => d.epsEstimate),
-                        borderColor: '#6b7280',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        pointStyle: 'circle',
-                        pointRadius: 6,
-                        showLine: false
-                    },
-                    {
-                        label: 'Actual',
-                        data: recent.map(d => d.epsActual),
-                        borderColor: 'transparent',
-                        backgroundColor: (c) => {
-                            const d = recent[c.dataIndex];
-                            if (d.epsActual === undefined || d.epsActual === null) return 'transparent';
-                            return (d.epsActual >= d.epsEstimate) ? '#00c805' : '#ef4444';
-                        },
-                        pointStyle: 'circle',
-                        pointRadius: 10,
-                        showLine: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { color: '#2a2f3e' }, ticks: { color: '#9ca3af' } },
-                    y: { grid: { display: true, color: '#2a2f3e', borderDash: [5, 5] }, ticks: { color: '#9ca3af' } }
-                },
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-
-        // EPS Header Info
-        const nextDate = calendar && calendar['Earnings Date'] ? calendar['Earnings Date'][0] : '-';
-        document.getElementById('epsNextQuarter').innerText = nextDate !== '-' ? 'Next: ' + nextDate : '';
-        const last = earnings[0];
-        document.getElementById('epsEstVal').innerText = last.epsEstimate || '-';
-        // yfinance doesn't easily give High/Low EPS for future, so we can use surprise range or just dashes
-        document.getElementById('epsHighVal').innerText = '-';
-        document.getElementById('epsLowVal').innerText = '-';
+    // 1. Render EPS Chart
+    try {
+        renderEPSChart(earnings, calendar);
+    } catch (e) {
+        console.error("EPS Chart Render Error:", e);
     }
 
-    // 2. Revenue vs Earnings (Using statistics data if available or from earnings_history if possible)
-    // Note: get_earnings only returns EPS. We need Revenue/Earnings from get_statistics
-    const revEarnCanvas = document.getElementById('chartRevEarn');
-    const stats = window.financialData;
-    if (revEarnCanvas && stats && stats.charts && stats.charts.quarterly) {
-        const ctx = revEarnCanvas.getContext('2d');
-        if (financialChartInstances.RevEarn) financialChartInstances.RevEarn.destroy();
+    // 2. Render Revenue vs Earnings Chart
+    // Note: We use global window.financialData here as per original design
+    try {
+        renderRevEarnChart(window.financialData, calendar);
+    } catch (e) {
+        console.error("RevEarn Chart Render Error:", e);
+    }
+}
 
-        const rev = stats.charts.quarterly.Revenue;
-        const earn = stats.charts.quarterly.NetIncome;
+function renderEPSChart(earnings, calendar) {
+    const epsCanvas = document.getElementById('chartEPS');
+    if (!epsCanvas) return;
 
-        // Match dates
-        const limit = 5;
-        const recentRev = rev.slice(-limit);
-        const recentEarn = earn.slice(-limit);
-        const labels = recentRev.map(d => {
-            const parts = d.date.split('-');
-            return `Q${Math.ceil(parseInt(parts[1]) / 3)} ${parts[0].slice(-2)}`;
+    const ctx = epsCanvas.getContext('2d');
+
+    // destroy previous instance
+    if (financialChartInstances.EPS) {
+        financialChartInstances.EPS.destroy();
+        financialChartInstances.EPS = null;
+    }
+
+    // 1. Data Prep
+    const finalEarningList = Array.isArray(earnings) ? earnings : [];
+
+    // Get last 4 actuals
+    const historic = [...finalEarningList].slice(0, 4).reverse();
+
+    // Get future estimate
+    let futurePoint = null;
+    if (calendar) {
+        const calAvg = calendar['Earnings Average'];
+        // Basic validation that we have a number
+        if (calAvg !== undefined && calAvg !== null && calAvg !== '-') {
+            const est = parseFloat(calAvg);
+            if (!isNaN(est)) {
+                const high = parseFloat(calendar['Earnings High'] || est);
+                const low = parseFloat(calendar['Earnings Low'] || est);
+                const dateVal = (calendar['Earnings Date'] && calendar['Earnings Date'][0])
+                    ? calendar['Earnings Date'][0]
+                    : 'Next';
+
+                futurePoint = {
+                    date: dateVal,
+                    epsEstimate: est,
+                    epsHigh: high,
+                    epsLow: low,
+                    isFuture: true
+                };
+            }
+        }
+    }
+
+    const chartPoints = [...historic, ...(futurePoint ? [futurePoint] : [])];
+
+    // 2. Handle No Data
+    if (chartPoints.length === 0) {
+        ctx.clearRect(0, 0, epsCanvas.width, epsCanvas.height);
+        ctx.fillStyle = '#6b7280';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No Earnings Data Available', epsCanvas.width / 2, epsCanvas.height / 2);
+        return;
+    }
+
+    // 3. Helper for Labels
+    const getLabel = (d) => {
+        const date = new Date(d.date || d.quarter);
+        if (isNaN(date)) return d.date || 'Next';
+        const m = date.getMonth();
+        const y = date.getFullYear();
+        const q = Math.ceil((m + 1) / 3);
+        const fy = m >= 9 ? y + 1 : y;
+        return `Q${q} FY${fy.toString().slice(-2)}`;
+    };
+    const labels = chartPoints.map(getLabel);
+
+    // 4. Update Header DOM elements immediately
+    if (futurePoint) {
+        const nextLabel = document.getElementById('epsNextQuarter');
+        const estVal = document.getElementById('epsEstVal');
+        const highVal = document.getElementById('epsHighVal');
+        const lowVal = document.getElementById('epsLowVal');
+        if (nextLabel) nextLabel.innerText = getLabel(futurePoint);
+        if (estVal) estVal.innerText = futurePoint.epsEstimate.toFixed(2);
+        if (highVal) highVal.innerText = futurePoint.epsHigh.toFixed(2);
+        if (lowVal) lowVal.innerText = futurePoint.epsLow.toFixed(2);
+    } else {
+        // Reset if no future data
+        const els = ['epsNextQuarter', 'epsEstVal', 'epsHighVal', 'epsLowVal'];
+        els.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = '-';
         });
+    }
 
-        financialChartInstances.RevEarn = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Revenue', data: recentRev.map(d => d.value), backgroundColor: '#facc15', borderRadius: 4 },
-                    { label: 'Earnings', data: recentEarn.map(d => d.value), backgroundColor: '#3b82f6', borderRadius: 4 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: '#9ca3af' } },
-                    y: { display: false }
+    // 5. Define Custom Plugin for "Beat/Loss" labels
+    const beatLossPlugin = {
+        id: 'beatLossLabels',
+        afterDraw: (chart) => {
+            const { ctx, scales: { x, y } } = chart;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.font = '500 11px Inter';
+
+            chartPoints.forEach((d, i) => {
+                if (d.isFuture) return;
+                if (d.epsActual === undefined || d.epsActual === null) return;
+
+                const xPos = x.getPixelForValue(i);
+                const yPos = y.bottom + 20;
+
+                const surprise = d.surprise !== undefined ? d.surprise : (d.epsActual - (d.epsEstimate || 0));
+                const isBeat = (surprise >= 0);
+
+                // "Beat" / "Loss" text
+                ctx.fillStyle = isBeat ? '#00c805' : '#ef4444';
+                ctx.fillText(isBeat ? 'Beat' : 'Loss', xPos, yPos);
+
+                // Value text
+                const sign = surprise >= 0 ? '+' : '-';
+                ctx.fillText(`${sign} $${Math.abs(surprise).toFixed(2)}`, xPos, yPos + 15);
+            });
+            ctx.restore();
+        }
+    };
+
+    const candlePlugin = {
+        id: 'nextQuarterCandle',
+        beforeDraw: (chart) => {
+            const { ctx, scales: { x, y } } = chart;
+            const nextIdx = chartPoints.findIndex(d => d.isFuture);
+            if (nextIdx === -1) return;
+
+            const d = chartPoints[nextIdx];
+            const xPos = x.getPixelForValue(nextIdx);
+            const yHigh = y.getPixelForValue(d.epsHigh);
+            const yLow = y.getPixelForValue(d.epsLow);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.moveTo(xPos, yHigh);
+            ctx.lineTo(xPos, yLow);
+            ctx.stroke();
+
+            // Draw small dots at ends
+            ctx.fillStyle = '#1e2433';
+            [yHigh, yLow].forEach(yP => {
+                ctx.beginPath();
+                ctx.arc(xPos, yP, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+            ctx.restore();
+        }
+    };
+
+    // 6. Init Chart
+    financialChartInstances.EPS = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Estimated',
+                    data: chartPoints.map(d => d.epsEstimate),
+                    borderColor: (c) => chartPoints[c.dataIndex].isFuture ? '#fff' : '#6b7280',
+                    backgroundColor: (c) => chartPoints[c.dataIndex].isFuture ? '#1e2433' : 'transparent',
+                    borderWidth: 2,
+                    pointStyle: 'circle',
+                    pointRadius: (c) => chartPoints[c.dataIndex].isFuture ? 8 : 4,
+                    showLine: false
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (c) => formatNetworkNumber(c.raw)
+                {
+                    label: 'Actual',
+                    data: chartPoints.map(d => d.epsActual),
+                    borderColor: 'transparent',
+                    backgroundColor: (c) => {
+                        const d = chartPoints[c.dataIndex];
+                        if (!d || d.isFuture) return 'transparent';
+                        return (d.epsActual >= (d.epsEstimate || 0)) ? '#00c805' : '#ef4444';
+                    },
+                    pointStyle: 'circle',
+                    pointRadius: 10,
+                    showLine: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { bottom: 60 } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#9ca3af', padding: 10 } },
+                y: {
+                    grid: { display: true, color: '#2a2f3e', borderDash: [5, 5] },
+                    ticks: { color: '#9ca3af' } // dynamic scale
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: '#1e2433',
+                    callbacks: {
+                        label: (c) => {
+                            const d = chartPoints[c.dataIndex];
+                            if (c.datasetIndex === 0) return `Est: ${d.epsEstimate}`;
+                            if (c.datasetIndex === 1 && d.epsActual !== undefined) return `Actual: ${d.epsActual}`;
+                            return null;
                         }
                     }
                 }
             }
-        });
+        },
+        plugins: [beatLossPlugin, candlePlugin]
+    });
+}
 
-        // Header
-        const nextRev = stats.charts.quarterly.Revenue.slice(-1)[0];
-        const nextEarn = stats.charts.quarterly.NetIncome.slice(-1)[0];
-        document.getElementById('revEarnNextQuarter').innerText = 'Last Period';
-        document.getElementById('nextRevVal').innerText = formatNetworkNumber(nextRev.value);
-        document.getElementById('nextEarnVal').innerText = formatNetworkNumber(nextEarn.value);
+function renderRevEarnChart(stats, calendar) {
+    const revEarnCanvas = document.getElementById('chartRevEarn');
+    if (!revEarnCanvas) return;
+
+    // Validations
+    if (!stats || !stats.charts || !stats.charts.quarterly || !stats.charts.quarterly.Revenue || stats.charts.quarterly.Revenue.length === 0) {
+        // Clear if no data
+        const ctx = revEarnCanvas.getContext('2d');
+        ctx.clearRect(0, 0, revEarnCanvas.width, revEarnCanvas.height);
+        ctx.fillStyle = '#6b7280';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No Revenue Data', revEarnCanvas.width / 2, revEarnCanvas.height / 2);
+        return;
     }
+
+    const ctx = revEarnCanvas.getContext('2d');
+    if (financialChartInstances.RevEarn) {
+        financialChartInstances.RevEarn.destroy();
+        financialChartInstances.RevEarn = null;
+    }
+
+    const revData = stats.charts.quarterly.Revenue;
+    const earnData = stats.charts.quarterly.NetIncome || [];
+    const recentRev = revData.slice(-5);
+
+    const formatLabel = (dateStr) => {
+        let year, month;
+        // Parse YYYY-MM-DD manually to avoid timezone shifts
+        if (typeof dateStr === 'string' && dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts.length >= 2) {
+                year = parseInt(parts[0]);
+                month = parseInt(parts[1]); // 1-12
+            }
+        }
+
+        // Fallback to Date object
+        if (!year) {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            year = d.getFullYear();
+            month = d.getMonth() + 1;
+        }
+
+        const q = Math.ceil(month / 3);
+        const yStr = year.toString().slice(-2);
+
+        // Standard Calendar format: Q1 '24
+        return `Q${q} '${yStr}`;
+    };
+
+    const earnMap = {};
+    earnData.forEach(item => { earnMap[item.date] = item.value; });
+
+    // Plugin: Data Labels
+    const barDataLabelsPlugin = {
+        id: 'barDataLabels',
+        afterDatasetsDraw: (chart) => {
+            const { ctx, data } = chart;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '500 10px Inter';
+            ctx.fillStyle = '#fff';
+
+            chart.getSortedVisibleDatasetMetas().forEach((meta) => {
+                if (!meta) return;
+                meta.data.forEach((bar, index) => {
+                    const val = data.datasets[meta.index].data[index];
+                    if (val === 0 || val == null) return;
+                    // Format billions
+                    const label = (val / 1e9).toFixed(1) + 'B';
+                    ctx.fillText(label, bar.x, bar.y + 15);
+                });
+            });
+            ctx.restore();
+        }
+    };
+
+    // Update Header & Prepare Future Data
+    let futurePoint = null;
+    let headerValuesSet = false;
+
+    if (calendar && calendar['Earnings Date']) {
+        const nextDate = calendar['Earnings Date'][0]; // e.g. "2025-04-23" or similar
+        const estRev = calendar['Revenue Average'];
+        const estEps = calendar['Earnings Average'];
+
+        // We need share count to est Net Income from EPS
+        const sharesData = stats.charts.quarterly.ShareOutstanding;
+        let lastShares = 0;
+        if (sharesData && sharesData.length > 0) {
+            lastShares = sharesData[sharesData.length - 1].value;
+        }
+
+        if (estRev && estEps && lastShares > 0) {
+            const estNetIncome = estEps * lastShares;
+
+            futurePoint = {
+                date: nextDate,
+                revenue: estRev,
+                earnings: estNetIncome,
+                isEstimate: true
+            };
+
+            // Update Header UI
+            const revNextEl = document.getElementById('revEarnNextQuarter');
+            if (revNextEl) revNextEl.innerText = 'Next: ' + nextDate;
+
+            const nextRevValEl = document.getElementById('nextRevVal');
+            if (nextRevValEl) nextRevValEl.innerText = formatNetworkNumber(estRev);
+
+            const nextEarnValEl = document.getElementById('nextEarnVal');
+            if (nextEarnValEl) nextEarnValEl.innerText = formatNetworkNumber(estNetIncome);
+
+            headerValuesSet = true;
+        }
+    }
+
+    // Fallback if no future estimate for Header
+    if (!headerValuesSet) {
+        const lastRev = recentRev[recentRev.length - 1];
+        const lastEarnVal = lastRev ? (earnMap[lastRev.date] || 0) : 0;
+
+        const revNextEl = document.getElementById('revEarnNextQuarter');
+        if (revNextEl) revNextEl.innerText = lastRev ? formatLabel(lastRev.date) : '-';
+
+        const nextRevValEl = document.getElementById('nextRevVal');
+        if (nextRevValEl) nextRevValEl.innerText = lastRev ? (lastRev.value / 1e9).toFixed(2) + 'B' : '-';
+
+        const nextEarnValEl = document.getElementById('nextEarnVal');
+        if (nextEarnValEl) nextEarnValEl.innerText = lastEarnVal ? (lastEarnVal / 1e9).toFixed(3) + 'B' : '-';
+    }
+
+    // Prepare Chart Data (Historical + Future)
+    const chartLabels = recentRev.map(d => formatLabel(d.date));
+    const chartRevenue = recentRev.map(d => d.value);
+    const chartEarnings = recentRev.map(d => earnMap[d.date] || 0);
+    const backgroundColorsRev = recentRev.map(() => '#facc15');
+    const backgroundColorsEarn = recentRev.map(() => '#3b82f6');
+
+    if (futurePoint) {
+        // Calculate next sequential quarter label from the last historical date
+        // Earnings Date is usually 1-2 months AFTER the quarter ends, so relying on it directly yields the wrong quarter (off by 1).
+        // Safest bet: Take the last historical quarter date and add 3 months.
+        let nextQLabel = 'Next';
+        if (recentRev.length > 0) {
+            const lastDateStr = recentRev[recentRev.length - 1].date;
+            // Parse manually
+            let y, m;
+            if (lastDateStr.includes('-')) {
+                const parts = lastDateStr.split('-');
+                y = parseInt(parts[0]);
+                m = parseInt(parts[1]);
+            }
+
+            if (y && m) {
+                // Add 3 months
+                m += 3;
+                if (m > 12) {
+                    m -= 12;
+                    y += 1;
+                }
+                const q = Math.ceil(m / 3);
+                const yStr = y.toString().slice(-2);
+                nextQLabel = `Q${q} '${yStr}`;
+            }
+        }
+
+        chartLabels.push('Est ' + nextQLabel);
+        chartRevenue.push(futurePoint.revenue);
+        chartEarnings.push(futurePoint.earnings);
+
+        // Use patterns or distinct colors for estimates
+        // For simplicity, using a lighter/hashed look request
+        // We can use the 'patternomaly' library if available, but here we just use a distinct color
+        backgroundColorsRev.push('#fef08a'); // lighter yellow
+        backgroundColorsEarn.push('#93c5fd'); // lighter blue
+    }
+
+    financialChartInstances.RevEarn = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: [
+                {
+                    label: 'Revenue',
+                    data: chartRevenue,
+                    backgroundColor: backgroundColorsRev,
+                    borderRadius: 4,
+                    barThickness: 25,
+                },
+                {
+                    label: 'Earnings',
+                    data: chartEarnings,
+                    backgroundColor: backgroundColorsEarn,
+                    borderRadius: 4,
+                    barThickness: 25
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 60 } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+                y: {
+                    display: true,
+                    grid: { color: '#2a2f3e', borderDash: [5, 5] },
+                    ticks: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e2433',
+                    callbacks: {
+                        label: (c) => {
+                            const val = formatNetworkNumber(c.raw);
+                            const label = c.dataset.label;
+                            const isEst = (c.dataIndex === chartLabels.length - 1 && futurePoint);
+                            return isEst ? `Est ${label}: ${val}` : `${label}: ${val}`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [barDataLabelsPlugin]
+    });
 }
 
 function updateHeaderInfo(data, historyBox, period) {
