@@ -11,6 +11,11 @@ let financialChartInstances = {
     NetIncome: null,
     FreeCashFlow: null,
     Expenses: null,
+    ShareOutstanding: null,
+    OperatingMargin: null,
+    Recommendation: null,
+    EPS: null,
+    RevEarn: null,
     Modal: null
 };
 let currentModalMetric = null;
@@ -86,6 +91,9 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
     let quoteData = null;
     let historyData = null;
     let statisticsData = null;
+    let earningsData = null;
+    let recommendationData = null;
+    let calendarData = null;
     let errorOccurred = null;
 
     try {
@@ -103,7 +111,7 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
         });
 
         // Timeout Promise
-        const fetchWithTimeout = (url, options = {}, timeout = 12000) => {
+        const fetchWithTimeout = (url, options = {}, timeout = 15000) => {
             return Promise.race([
                 fetch(url, options),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request Timeout')), timeout))
@@ -117,9 +125,12 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
             { id: 'history', url: `${API_BASE_URL}/api/history/${symbolClean}?period=${period}` }
         ];
 
-        // Only fetch statistics (Heavy Financials) if NOT a background refresh
+        // Only fetch statistics and heavy data if NOT a background refresh
         if (!isRefresh) {
             endpoints.push({ id: 'stats', url: `${API_BASE_URL}/api/statistics/${symbolClean}` });
+            endpoints.push({ id: 'earnings', url: `${API_BASE_URL}/api/earnings/${symbolClean}` });
+            endpoints.push({ id: 'rec', url: `${API_BASE_URL}/api/recommendation/${symbolClean}` });
+            endpoints.push({ id: 'cal', url: `${API_BASE_URL}/api/calendar/${symbolClean}` });
         }
 
         const responses = await Promise.all(
@@ -133,48 +144,65 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
                 if (id === 'quote') quoteData = json;
                 if (id === 'history') historyData = json;
                 if (id === 'stats') statisticsData = json;
+                if (id === 'earnings') earningsData = json;
+                if (id === 'rec') recommendationData = json;
+                if (id === 'cal') calendarData = json;
             } else {
                 if (id === 'quote' && res.status === 404) errorOccurred = 'Stock Not Found';
                 console.warn(`${id} fetch failed:`, res.status);
             }
         }
 
-        // Render Data
+        // Render Data - Independent blocks to ensure partial failure doesn't break everything
         if (quoteData && !quoteData.error) {
             updateHeaderInfo(quoteData, historyData, period);
+            updateInsightGauge(quoteData);
+        } else if (!isRefresh) {
+            // Handle quote failure (like CAPTCHA)
+            if (quoteData && quoteData.code === 'CAPTCHA_FAIL') {
+                const title = document.getElementById('companyName');
+                if (title) title.innerText = 'Verification Required';
+                const symLabel = document.getElementById('symbolLabel');
+                if (symLabel) symLabel.textContent = 'Please solve the CAPTCHA or refresh.';
+            } else if (errorOccurred === 'Stock Not Found') {
+                const title = document.getElementById('companyName');
+                if (title) title.innerText = 'Stock Not Found';
+            }
+        }
 
+        // Always try to render charts and financials if data is present
+        if (historyData && Array.isArray(historyData) && !historyData.error) {
             // Chart Color Logic
             let isPositiveChange = true;
-            if (period !== '1d' && historyData && historyData.length > 0) {
+            if (period !== '1d' && historyData.length > 0) {
                 const startPrice = parseFloat(historyData[0].close);
-                const currentPrice = parseFloat(quoteData.price);
+                const currentPrice = quoteData ? parseFloat(quoteData.price) : parseFloat(historyData[historyData.length - 1].close);
                 isPositiveChange = (currentPrice - startPrice) >= 0;
-            } else {
-                const changeVal = parseFloat(quoteData.change);
-                isPositiveChange = changeVal >= 0;
+            } else if (quoteData) {
+                isPositiveChange = parseFloat(quoteData.change) >= 0;
             }
             const chartColor = isPositiveChange ? '#00E396' : '#ff4560';
-
-            if (historyData && !historyData.error) {
-                renderChart(historyData, symbolClean, chartColor);
-            }
-        } else if (!quoteData && errorOccurred) {
-            const title = document.getElementById('companyName');
-            if (title) title.innerText = `Error: ${errorOccurred}`;
-            const symLabel = document.getElementById('symbolLabel');
-            if (symLabel) symLabel.innerText = symbolClean;
+            renderChart(historyData, symbolClean, chartColor);
         }
 
         if (statisticsData && !statisticsData.error) {
             updateFinancials(statisticsData);
         }
 
+        if (recommendationData) {
+            renderRecommendationChart(recommendationData);
+        }
+
+        if (earningsData || calendarData) {
+            updateEarningsUI(earningsData || [], calendarData || {});
+        }
+
     } catch (error) {
         console.error('Data fetch error:', error);
-        const titleEl = document.getElementById('companyName');
-        if (titleEl) {
-            if (titleEl.innerText === '' || titleEl.innerText === 'Waiting...') {
-                titleEl.innerText = 'Unable to fetch data. Please try again.';
+        if (!isRefresh) {
+            const titleEl = document.getElementById('companyName');
+            if (titleEl && (titleEl.innerText === '' || titleEl.innerText === 'Waiting...')) {
+                titleEl.innerText = 'Data fetch issue. Try refreshing.';
             }
         }
     } finally {
@@ -184,6 +212,286 @@ async function fetchStockData(symbol, period = '1d', isRefresh = false) {
             searchInput.focus();
         }
         document.body.style.cursor = 'default';
+    }
+}
+
+function updateInsightGauge(data) {
+    const cur = parseFloat(data.price);
+    const low = data.target_low === '-' ? null : parseFloat(data.target_low);
+    const med = data.target_median === '-' ? null : parseFloat(data.target_median);
+    const high = data.target_high === '-' ? null : parseFloat(data.target_high);
+
+    if (!low || !med || !high) return;
+
+    // Update Text Labels
+    document.getElementById('targetValCurrent').innerText = cur.toFixed(2);
+    document.getElementById('targetValLow').innerText = '$ ' + low.toFixed(0);
+    document.getElementById('targetValMedian').innerText = med.toFixed(0);
+    document.getElementById('targetValHigh').innerText = '$ ' + high.toFixed(0);
+
+    // Calculate Upsides
+    const medUpside = ((med - cur) / cur * 100).toFixed(1);
+    const lowUpside = ((low - cur) / cur * 100).toFixed(1);
+    const highUpside = ((high - cur) / cur * 100).toFixed(1);
+
+    const medUpsideEl = document.getElementById('targetMedianUpside');
+    medUpsideEl.innerText = (medUpside >= 0 ? '+' : '') + medUpside + '%';
+    medUpsideEl.style.color = medUpside >= 0 ? '#00E396' : '#ff4560';
+
+    const lowUpsideEl = document.getElementById('targetLowUpside');
+    lowUpsideEl.innerText = (lowUpside >= 0 ? '+' : '') + lowUpside + '%';
+    lowUpsideEl.style.color = lowUpside >= 0 ? '#00E396' : '#ff4560';
+
+    const highUpsideEl = document.getElementById('targetHighUpside');
+    highUpsideEl.innerText = (highUpside >= 0 ? '+' : '') + highUpside + '%';
+    // Dynamic Scale Logic: The gauge adapts to include the full range of all 4 points.
+    const allVals = [cur, med, low, high].filter(v => v !== null);
+    const minVal = Math.min(...allVals);
+    const maxVal = Math.max(...allVals);
+    const range = (maxVal - minVal) || 1;
+
+    // Map the values to the full 0% to 100% visual range of the bar.
+    // Smallest value will be at 0% (left end), Greatest will be at 100% (right end).
+    const getPos = (val) => ((val - minVal) / range) * 100;
+
+    const curPos = getPos(cur);
+    const medPos = getPos(med);
+    const lowPos = getPos(low);
+    const highPos = getPos(high);
+
+    const markerCur = document.getElementById('markerCurrent');
+    const markerMed = document.getElementById('markerMedian');
+    const markerLow = document.getElementById('markerLowExtreme');
+    const markerHigh = document.getElementById('markerHighExtreme');
+
+    markerCur.style.left = curPos + '%';
+    markerMed.style.left = medPos + '%';
+
+    // Position the Extreme Labels (Low/High) at their fixed spots
+    markerLow.style.left = lowPos + '%';
+    markerHigh.style.left = highPos + '%';
+    markerHigh.style.right = 'auto';
+
+    // Ensure all labels use translateX(-50%) for center alignment
+    markerCur.style.transform = 'translateX(-50%)';
+    markerMed.style.transform = 'translateX(-50%)';
+    markerLow.style.transform = 'translateX(-50%)';
+    markerHigh.style.transform = 'translateX(-50%)';
+
+    // Overlap Prevention for top labels (Current vs Median)
+    const minSpace = 15; // Percent spacing threshold
+    if (Math.abs(curPos - medPos) < minSpace) {
+        if (curPos < medPos) {
+            markerCur.style.transform = `translateX(-90%)`;
+            markerMed.style.transform = `translateX(-10%)`;
+        } else {
+            markerCur.style.transform = `translateX(-10%)`;
+            markerMed.style.transform = `translateX(-90%)`;
+        }
+    }
+
+    // Gauge rail active part covers the fixed target range (25% to 75%)
+    const activeRange = document.getElementById('gaugeActiveRange');
+    activeRange.style.left = lowPos + '%';
+    activeRange.style.width = (highPos - lowPos) + '%';
+}
+
+function renderRecommendationChart(data) {
+    const canvas = document.getElementById('chartRecommendation');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Expected data: [{period: '0m', strongBuy: X, buy: Y, ...}, ...]
+    // Sort by period descending ( Jan 26, Dec 25, Nov 25, Oct 25 )
+    const sorted = [...data].reverse();
+    if (sorted.length === 0) {
+        if (financialChartInstances.Recommendation) financialChartInstances.Recommendation.destroy();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    // Convert period offsets (0m, -1m) to Month Year
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const labels = sorted.map(d => {
+        const offset = parseInt(d.period.replace('m', ''));
+        const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+        return `${months[date.getMonth()]} ${date.getFullYear().toString().slice(-2)}`;
+    });
+
+    if (financialChartInstances.Recommendation) financialChartInstances.Recommendation.destroy();
+
+    const datasets = [
+        { label: 'Strong Sell', data: sorted.map(d => d.strongSell), backgroundColor: '#ef4444' },
+        { label: 'Sell', data: sorted.map(d => d.sell), backgroundColor: '#f87171' },
+        { label: 'Hold', data: sorted.map(d => d.hold), backgroundColor: '#facc15' },
+        { label: 'Buy', data: sorted.map(d => d.buy), backgroundColor: '#90ee90' },
+        { label: 'Strong Buy', data: sorted.map(d => d.strongBuy), backgroundColor: '#00c805' }
+    ];
+
+    // Update Recommendation Text (Summary)
+    const current = sorted[sorted.length - 1];
+    let total = current.strongBuy + current.buy + current.hold + current.sell + current.strongSell;
+    let score = (current.strongBuy * 5 + current.buy * 4 + current.hold * 3 + current.sell * 2 + current.strongSell * 1) / total;
+
+    let recText = 'Hold';
+    let recColor = '#facc15';
+    if (score >= 4.5) { recText = 'Strong Buy'; recColor = '#00E396'; }
+    else if (score >= 3.5) { recText = 'Buy'; recColor = '#00E396'; }
+    else if (score >= 2.5) { recText = 'Hold'; recColor = '#facc15'; }
+    else if (score >= 1.5) { recText = 'Sell'; recColor = '#ff4560'; }
+    else { recText = 'Strong Sell'; recColor = '#ef4444'; }
+
+    const recEl = document.getElementById('recommendationText');
+    if (recEl) {
+        recEl.innerText = recText;
+        recEl.style.color = recColor;
+    }
+
+    financialChartInstances.Recommendation = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            indexAxis: 'x',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { color: '#9ca3af' } },
+                y: { stacked: true, display: false }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: '#1e2433' }
+            }
+        }
+    });
+}
+
+function updateEarningsUI(earnings, calendar) {
+    if (!earnings || !earnings.length) return;
+
+    // 1. EPS Chart
+    const epsCanvas = document.getElementById('chartEPS');
+    if (epsCanvas) {
+        const ctx = epsCanvas.getContext('2d');
+        if (financialChartInstances.EPS) financialChartInstances.EPS.destroy();
+
+        // Use last 4-5 quarters
+        const recent = earnings.slice(0, 5).reverse();
+        const labels = recent.map(d => {
+            const date = new Date(d.date);
+            const m = date.getMonth();
+            const y = date.getFullYear();
+            const q = Math.ceil((m + 1) / 3);
+            return `Q${q} ${y}`;
+        });
+
+        financialChartInstances.EPS = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Estimated',
+                        data: recent.map(d => d.epsEstimate),
+                        borderColor: '#6b7280',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointStyle: 'circle',
+                        pointRadius: 6,
+                        showLine: false
+                    },
+                    {
+                        label: 'Actual',
+                        data: recent.map(d => d.epsActual),
+                        borderColor: 'transparent',
+                        backgroundColor: (c) => {
+                            const d = recent[c.dataIndex];
+                            if (d.epsActual === undefined || d.epsActual === null) return 'transparent';
+                            return (d.epsActual >= d.epsEstimate) ? '#00c805' : '#ef4444';
+                        },
+                        pointStyle: 'circle',
+                        pointRadius: 10,
+                        showLine: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: '#2a2f3e' }, ticks: { color: '#9ca3af' } },
+                    y: { grid: { display: true, color: '#2a2f3e', borderDash: [5, 5] }, ticks: { color: '#9ca3af' } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // EPS Header Info
+        const nextDate = calendar && calendar['Earnings Date'] ? calendar['Earnings Date'][0] : '-';
+        document.getElementById('epsNextQuarter').innerText = nextDate !== '-' ? 'Next: ' + nextDate : '';
+        const last = earnings[0];
+        document.getElementById('epsEstVal').innerText = last.epsEstimate || '-';
+        // yfinance doesn't easily give High/Low EPS for future, so we can use surprise range or just dashes
+        document.getElementById('epsHighVal').innerText = '-';
+        document.getElementById('epsLowVal').innerText = '-';
+    }
+
+    // 2. Revenue vs Earnings (Using statistics data if available or from earnings_history if possible)
+    // Note: get_earnings only returns EPS. We need Revenue/Earnings from get_statistics
+    const revEarnCanvas = document.getElementById('chartRevEarn');
+    const stats = window.financialData;
+    if (revEarnCanvas && stats && stats.charts && stats.charts.quarterly) {
+        const ctx = revEarnCanvas.getContext('2d');
+        if (financialChartInstances.RevEarn) financialChartInstances.RevEarn.destroy();
+
+        const rev = stats.charts.quarterly.Revenue;
+        const earn = stats.charts.quarterly.NetIncome;
+
+        // Match dates
+        const limit = 5;
+        const recentRev = rev.slice(-limit);
+        const recentEarn = earn.slice(-limit);
+        const labels = recentRev.map(d => {
+            const parts = d.date.split('-');
+            return `Q${Math.ceil(parseInt(parts[1]) / 3)} ${parts[0].slice(-2)}`;
+        });
+
+        financialChartInstances.RevEarn = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Revenue', data: recentRev.map(d => d.value), backgroundColor: '#facc15', borderRadius: 4 },
+                    { label: 'Earnings', data: recentEarn.map(d => d.value), backgroundColor: '#3b82f6', borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af' } },
+                    y: { display: false }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (c) => formatNetworkNumber(c.raw)
+                        }
+                    }
+                }
+            }
+        });
+
+        // Header
+        const nextRev = stats.charts.quarterly.Revenue.slice(-1)[0];
+        const nextEarn = stats.charts.quarterly.NetIncome.slice(-1)[0];
+        document.getElementById('revEarnNextQuarter').innerText = 'Last Period';
+        document.getElementById('nextRevVal').innerText = formatNetworkNumber(nextRev.value);
+        document.getElementById('nextEarnVal').innerText = formatNetworkNumber(nextEarn.value);
     }
 }
 

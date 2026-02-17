@@ -236,6 +236,12 @@ class StockDataService:
             trail_eps = self._get_info(ticker, 'trailingEps', default='-')
             beta = self._get_info(ticker, 'beta', default='-')
 
+            # Analyst Price Targets
+            target_low = self._get_info(ticker, 'targetLowPrice', default=None)
+            target_median = self._get_info(ticker, 'targetMedianPrice', default=None)
+            target_high = self._get_info(ticker, 'targetHighPrice', default=None)
+            target_mean = self._get_info(ticker, 'targetMeanPrice', default=None)
+
             open_price = float(last_quote['Open'])
             
             # Calculate daily change
@@ -273,6 +279,12 @@ class StockDataService:
                 "pe_ratio": safe_round(pe_ratio), # Explicitly return pe_ratio for frontend
                 "eps": safe_round(trail_eps),
                 "beta": safe_round(beta),
+                
+                "target_low": safe_round(target_low),
+                "target_median": safe_round(target_median),
+                "target_high": safe_round(target_high),
+                "target_mean": safe_round(target_mean),
+
                 "date": str(last_quote.name.date())
             }
 
@@ -321,6 +333,99 @@ class StockDataService:
             
         except Exception as e:
             print(f"Error fetching historical data for {symbol}: {e}")
+            return []
+
+    def get_earnings(self, symbol):
+        """
+        Fetch earnings history for a given symbol.
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            df = ticker.earnings_history
+            if df is not None and not df.empty:
+                # Convert index (dates) to string and columns to dict
+                df = df.reset_index()
+                # Rename the index column if it's named 'index' or similar
+                if 'index' in df.columns:
+                    df = df.rename(columns={'index': 'date'})
+                # If the first column is a datetime, format it
+                for col in df.columns:
+                    if pd.api.types.is_datetime64_any_dtype(df[col]):
+                        df[col] = df[col].dt.strftime('%Y-%m-%d')
+                
+                return df.to_dict(orient='records')
+            return []
+        except Exception as e:
+            print(f"Error fetching earnings for {symbol}: {e}")
+            return []
+
+    def get_calendar(self, symbol):
+        """
+        Fetch calendar events for a given symbol.
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            cal = ticker.calendar
+            if cal is not None:
+                # Calendar can be a dict or a DataFrame depending on yfinance version
+                if isinstance(cal, pd.DataFrame):
+                    df = cal.copy()
+                    # Format index if it's dates
+                    if pd.api.types.is_datetime64_any_dtype(df.index):
+                        df.index = df.index.strftime('%Y-%m-%d')
+                    # Format all datetime columns
+                    for col in df.columns:
+                        if pd.api.types.is_datetime64_any_dtype(df[col]):
+                            df[col] = df[col].dt.strftime('%Y-%m-%d')
+                    return df.to_dict()
+                
+                # If it's a dict, handle datetime objects
+                if isinstance(cal, dict):
+                    serializable_cal = {}
+                    for k, v in cal.items():
+                        if isinstance(v, list):
+                            new_list = []
+                            for item in v:
+                                if hasattr(item, 'strftime'):
+                                    new_list.append(item.strftime('%Y-%m-%d'))
+                                else:
+                                    new_list.append(item)
+                            serializable_cal[k] = new_list
+                        elif hasattr(v, 'strftime'):
+                            serializable_cal[k] = v.strftime('%Y-%m-%d')
+                        else:
+                            serializable_cal[k] = v
+                    return serializable_cal
+            return {}
+        except Exception as e:
+            print(f"Error fetching calendar for {symbol}: {e}")
+            return {}
+
+    def get_recommendation(self, symbol):
+        """
+        Fetch recommendations summary for a given symbol.
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            df = ticker.recommendations_summary
+            if df is not None and not df.empty:
+                # Ensure we handle any potential datetime objects
+                df = df.reset_index()
+                if 'index' in df.columns:
+                    # If index was just row numbers, we can drop it
+                    if df['index'].dtype == 'int64':
+                        df = df.drop(columns=['index'])
+                    else:
+                        df = df.rename(columns={'index': 'date'})
+                
+                for col in df.columns:
+                    if pd.api.types.is_datetime64_any_dtype(df[col]):
+                        df[col] = df[col].dt.strftime('%Y-%m-%d')
+                        
+                return df.to_dict(orient='records')
+            return []
+        except Exception as e:
+            print(f"Error fetching recommendation for {symbol}: {e}")
             return []
 
 
@@ -417,3 +522,17 @@ if __name__ == "__main__":
     print("\n--- Fetching 5 Day History for TSLA ---")
     history = service.get_historical_data("TSLA", period="5d")
     print(f"Fetched {len(history)} data points for TSLA")
+
+    # Test New Methods
+    print("\n--- Fetching Earnings for NVDA ---")
+    earnings = service.get_earnings("NVDA")
+    print(f"Fetched {len(earnings)} earnings records")
+    if earnings: print(json.dumps(earnings[:2], indent=2))
+
+    print("\n--- Fetching Calendar for MSFT ---")
+    calendar = service.get_calendar("MSFT")
+    print(json.dumps(calendar, indent=2))
+
+    print("\n--- Fetching Recommendations for GOOGL ---")
+    recs = service.get_recommendation("GOOGL")
+    if recs: print(json.dumps(recs[:2], indent=2))

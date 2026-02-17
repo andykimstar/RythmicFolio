@@ -532,6 +532,161 @@
             </div>
         </div>
 
+        <!-- Insight Section -->
+        <div class="insight-section" style="margin-top: 60px;">
+            <h2 class="section-title">Insight</h2>
+            <div class="insight-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Price Target Card -->
+                <div class="chart-card price-target-card"
+                    style="background: #1e2433; padding: 25px; border-radius: 12px; height: 280px; position: relative; display: flex; flex-direction: column;">
+                    <h3 style="margin: 0 0 10px 0; color: #d1d5db; font-size: 1.1rem; font-weight: 400;">Analyst Price
+                        Target</h3>
+
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 15px;">
+                        <div class="target-gauge-container" style="position: relative; width: 100%; margin-top: 60px;">
+                            <!-- Gauge Line -->
+                            <div class="gauge-line"
+                                style="height: 8px; background: #374151; border-radius: 4px; width: 100%;"></div>
+                            <div id="gaugeActiveRange" class="gauge-active-range"
+                                style="position: absolute; height: 8px; background: #fff; border-radius: 4px; top: 0; left: 20%; width: 60%;">
+                            </div>
+
+                            <!-- Markers -->
+                            <div id="markerCurrent" class="gauge-marker current"
+                                style="position: absolute; top: -75px; left: 30%; transform: translateX(-50%); text-align: center;">
+                                <div style="color: #3b82f6; font-size: 0.8rem; margin-bottom: 2px;">Current</div>
+                                <div style="color: #fff; font-size: 1.2rem; font-weight: 600;">$<span
+                                        id="targetValCurrent">-</span></div>
+                                <div style="width: 2px; height: 35px; background: #4b5563; margin: 4px auto;"></div>
+                                <div
+                                    style="width: 12px; height: 12px; background: #4b5563; border-radius: 50%; border: 2px solid #1e2433; margin: -6px auto 0;">
+                                </div>
+                            </div>
+
+                            <div id="markerMedian" class="gauge-marker median"
+                                style="position: absolute; top: -75px; left: 70%; transform: translateX(-50%); text-align: center;">
+                                <div style="color: #3b82f6; font-size: 0.8rem; margin-bottom: 2px;">Median</div>
+                                <div style="color: #fff; font-size: 1.2rem; font-weight: 600;">$<span
+                                        id="targetValMedian">-</span> <span id="targetMedianUpside"
+                                        style="color: #00E396; font-size: 0.8rem; font-weight: 400;">+0%</span></div>
+                                <div style="width: 2px; height: 35px; background: #4b5563; margin: 4px auto;"></div>
+                                <div
+                                    style="width: 12px; height: 12px; background: #4b5563; border-radius: 50%; border: 2px solid #1e2433; margin: -6px auto 0;">
+                                </div>
+                            </div>
+
+                            <!-- Extreme Labels (Price Targets) -->
+                            <div style="position: relative; height: 75px; margin-top: 5px;">
+                                <div id="markerLowExtreme"
+                                    style="position: absolute; left: 25%; transform: translateX(-50%); text-align: center; min-width: 60px;">
+                                    <div style="width: 2px; height: 10px; background: #4b5563; margin: 0 auto 5px;">
+                                    </div>
+                                    <div style="color: #ef4444; font-size: 0.8rem;">Low</div>
+                                    <div id="targetValLow"
+                                        style="color: #fff; font-size: 1.1rem; font-weight: 600; margin-top: 2px;">$ -
+                                    </div>
+                                    <div id="targetLowUpside"
+                                        style="color: #ff4560; font-size: 0.75rem; margin-top: 2px;">
+                                        -0%</div>
+                                </div>
+                                <div id="markerHighExtreme"
+                                    style="position: absolute; left: 75%; transform: translateX(-50%); text-align: center; min-width: 60px;">
+                                    <div style="width: 2px; height: 10px; background: #4b5563; margin: 0 auto 5px;">
+                                    </div>
+                                    <div style="color: #00E396; font-size: 0.8rem;">High</div>
+                                    <div id="targetValHigh"
+                                        style="color: #fff; font-size: 1.1rem; font-weight: 600; margin-top: 2px;">$ -
+                                    </div>
+                                    <div id="targetHighUpside"
+                                        style="color: #00E396; font-size: 0.75rem; margin-top: 2px;">
+                                        +0%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendation Card -->
+                <div class="chart-card recommendation-card"
+                    style="background: #1e2433; padding: 25px; border-radius: 12px; height: 280px; display: flex; flex-direction: column;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #d1d5db; font-size: 1.1rem; font-weight: 400;">Analyst
+                            Recommendation</h3>
+                        <div id="recommendationText" style="color: #00E396; font-size: 1.2rem; font-weight: 500;">-
+                        </div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                        <div style="flex: 1; position: relative;">
+                            <canvas id="chartRecommendation"></canvas>
+                        </div>
+                        <!-- Legend below chart -->
+                        <div id="recLegend"
+                            style="display: flex; justify-content: center; align-items: center; gap: 15px; font-size: 0.75rem; color: #9ca3af; padding-top: 5px; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 10px; height: 10px; background: #00c805; border-radius: 2px;"></div>
+                                Strong Buy
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 10px; height: 10px; background: #90ee90; border-radius: 2px;"></div>
+                                Buy
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 10px; height: 10px; background: #facc15; border-radius: 2px;"></div>
+                                Hold
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 10px; height: 10px; background: #f87171; border-radius: 2px;"></div>
+                                Sell
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 10px; height: 10px; background: #ef4444; border-radius: 2px;"></div>
+                                Strong Sell
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Earnings Section -->
+        <div class="earnings-section" style="margin-top: 60px; margin-bottom: 100px;">
+            <h2 class="section-title">Earnings</h2>
+            <div class="earnings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- EPS Card -->
+                <div class="chart-card eps-card"
+                    style="background: #1e2433; padding: 25px; border-radius: 12px; height: 350px;">
+                    <h3 style="margin: 0 0 5px 0; color: #d1d5db; font-size: 1.1rem; font-weight: 400;">Earning Per
+                        Share</h3>
+                    <div id="epsHeaderInfo" style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 20px;">
+                        <span id="epsNextQuarter">-</span> &nbsp;
+                        <span style="color: #9ca3af;">EPS</span> <span id="epsEstVal" style="color: #fff;">-</span>
+                        &nbsp;
+                        <span style="color: #00E396;">High</span> <span style="color: #fff;">EPS <span
+                                id="epsHighVal">-</span></span> &nbsp;
+                        <span style="color: #ff4560;">Low</span> <span style="color: #fff;">EPS <span
+                                id="epsLowVal">-</span></span>
+                    </div>
+                    <div style="height: 240px;"><canvas id="chartEPS"></canvas></div>
+                </div>
+
+                <!-- Rev vs Earn Card -->
+                <div class="chart-card rev-earn-card"
+                    style="background: #1e2433; padding: 25px; border-radius: 12px; height: 350px;">
+                    <h3 style="margin: 0 0 5px 0; color: #d1d5db; font-size: 1.1rem; font-weight: 400;">Revenue vs
+                        Earnings</h3>
+                    <div id="revEarnHeaderInfo" style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 20px;">
+                        <span id="revEarnNextQuarter">-</span> &nbsp;
+                        <span style="color: #facc15;">Revenue</span> <span id="nextRevVal" style="color: #fff;">-</span>
+                        &nbsp;
+                        <span style="color: #3b82f6;">Earnings</span> <span id="nextEarnVal"
+                            style="color: #fff;">-</span>
+                    </div>
+                    <div style="height: 240px;"><canvas id="chartRevEarn"></canvas></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Full Screen Chart Modal -->
         <div id="chartModal"
             style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
@@ -577,8 +732,8 @@
         </div>
     </div>
 
-    <script src="utils.js?v=15"></script>
-    <script src="dashboard.js?v=15"></script>
+    <script src="utils.js?v=23"></script>
+    <script src="dashboard.js?v=23"></script>
 
 
 

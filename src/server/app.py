@@ -50,7 +50,12 @@ def verify_recaptcha(token):
         return True
     
     if not RECAPTCHA_SECRET_KEY:
-        return True # Bypass if no key configured (for dev/testing)
+        print("reCAPTCHA Secret Key not configured. Bypassing check.")
+        return True
+    
+    if not token:
+        print("reCAPTCHA Token missing in request headers.")
+        return False
     
     verify_url = "https://www.google.com/recaptcha/api/siteverify"
     payload = {
@@ -58,24 +63,28 @@ def verify_recaptcha(token):
         'response': token,
         'remoteip': request.remote_addr
     }
-
     
     try:
-        response = requests.post(verify_url, data=payload)
+        response = requests.post(verify_url, data=payload, timeout=5)
         result = response.json()
-        return result.get('success', False) and result.get('score', 0) >= 0.5
-    except:
+        success = result.get('success', False)
+        score = result.get('score', 0)
+        
+        if not success:
+            print(f"reCAPTCHA verification failed: {result.get('error-codes')}")
+        elif score < 0.5:
+            print(f"reCAPTCHA score too low: {score}")
+            
+        return success and score >= 0.5
+    except Exception as e:
+        print(f"Error during reCAPTCHA verification: {e}")
         return False
 
 @app.route('/api/quote/<symbol>', methods=['GET'])
-# @limiter.limit("100 per minute") # specific limit can be relaxed
 def get_quote(symbol):
-    # Verify reCAPTCHA
-
     token = request.headers.get("X-Recaptcha-Token")
     if not verify_recaptcha(token):
-        return jsonify({"error": "Bot detected or invalid CAPTCHA"}), 403
-
+        return jsonify({"error": "Bot detected or invalid CAPTCHA", "code": "CAPTCHA_FAIL"}), 403
 
     try:
         data = stock_service.get_stock_quote(symbol, timeinterval="1d")
@@ -88,12 +97,9 @@ def get_quote(symbol):
 @app.route('/api/history/<symbol>', methods=['GET'])
 def get_history(symbol):
     try:
-        # Get period from query param, default to 1mo
         period = request.args.get('period', "1d")
         data = stock_service.get_historical_data(symbol, period=period)
-        if data:
-            return jsonify(data)
-        return jsonify({"error": "No history found"}), 404
+        return jsonify(data if data is not None else [])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -104,6 +110,33 @@ def get_statistics(symbol):
         if data:
             return jsonify(data)
         return jsonify({"error": "No statistics found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/earnings/<symbol>', methods=['GET'])
+def get_earnings(symbol):
+    try:
+        data = stock_service.get_earnings(symbol)
+        # Return empty list if no data, instead of 404 error
+        return jsonify(data if data else [])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/calendar/<symbol>', methods=['GET'])
+def get_calendar(symbol):
+    try:
+        data = stock_service.get_calendar(symbol)
+        # Return empty dict if no data, instead of 404 error
+        return jsonify(data if data else {})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/recommendation/<symbol>', methods=['GET'])
+def get_recommendation(symbol):
+    try:
+        data = stock_service.get_recommendation(symbol)
+        # Return empty list if no data, instead of 404 error
+        return jsonify(data if data else [])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
