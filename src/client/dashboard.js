@@ -294,6 +294,7 @@ function updateInsightGauge(data) {
     const activeRange = document.getElementById('gaugeActiveRange');
     activeRange.style.left = lowPos + '%';
     activeRange.style.width = (highPos - lowPos) + '%';
+
 }
 
 function renderRecommendationChart(data) {
