@@ -392,6 +392,10 @@ class StockDataService:
                 }
                 df = df.rename(columns=rename_map)
 
+                # Filter: Only keep rows with Actual EPS (History)
+                if 'epsActual' in df.columns:
+                    df = df[df['epsActual'].notna()]
+
                 # Format Date
                 if 'date' in df.columns:
                     if pd.api.types.is_datetime64_any_dtype(df['date']):

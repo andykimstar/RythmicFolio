@@ -404,7 +404,15 @@ function renderEPSChart(earnings, calendar) {
     }
 
     // 1. Data Prep
+    // Data Prep
     const finalEarningList = Array.isArray(earnings) ? earnings : [];
+
+    // Sort by date descending (newest first) to ensure we get the latest quarters
+    finalEarningList.sort((a, b) => {
+        const da = new Date(a.date || a.quarter || 0);
+        const db = new Date(b.date || b.quarter || 0);
+        return db - da;
+    });
 
     // Get last 4 actuals
     const historic = [...finalEarningList].slice(0, 4).reverse();
@@ -448,13 +456,28 @@ function renderEPSChart(earnings, calendar) {
 
     // 3. Helper for Labels
     const getLabel = (d) => {
-        const date = new Date(d.date || d.quarter);
-        if (isNaN(date)) return d.date || 'Next';
-        const m = date.getMonth();
-        const y = date.getFullYear();
-        const q = Math.ceil((m + 1) / 3);
-        const fy = m >= 9 ? y + 1 : y;
-        return `Q${q} FY${fy.toString().slice(-2)}`;
+        let dateStr = d.date || d.quarter;
+        let year, month;
+
+        // Manual parse YYYY-MM-DD
+        if (typeof dateStr === 'string' && dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts.length >= 2) {
+                year = parseInt(parts[0]);
+                month = parseInt(parts[1]);
+            }
+        }
+
+        if (!year) {
+            const date = new Date(dateStr);
+            if (isNaN(date)) return 'Prior';
+            year = date.getFullYear();
+            month = date.getMonth() + 1;
+        }
+
+        const q = Math.ceil(month / 3);
+        const yStr = year.toString().slice(-2);
+        return `Q${q} '${yStr}`;
     };
     const labels = chartPoints.map(getLabel);
 
@@ -464,10 +487,13 @@ function renderEPSChart(earnings, calendar) {
         const estVal = document.getElementById('epsEstVal');
         const highVal = document.getElementById('epsHighVal');
         const lowVal = document.getElementById('epsLowVal');
-        if (nextLabel) nextLabel.innerText = getLabel(futurePoint);
-        if (estVal) estVal.innerText = futurePoint.epsEstimate.toFixed(2);
-        if (highVal) highVal.innerText = futurePoint.epsHigh.toFixed(2);
-        if (lowVal) lowVal.innerText = futurePoint.epsLow.toFixed(2);
+        // Use parsing for label
+        const futureDateLabel = getLabel(futurePoint);
+        if (nextLabel) nextLabel.innerText = futureDateLabel;
+
+        if (estVal) estVal.innerText = formatNetworkNumber(futurePoint.epsEstimate);
+        if (highVal) highVal.innerText = formatNetworkNumber(futurePoint.epsHigh);
+        if (lowVal) lowVal.innerText = formatNetworkNumber(futurePoint.epsLow);
     } else {
         // Reset if no future data
         const els = ['epsNextQuarter', 'epsEstVal', 'epsHighVal', 'epsLowVal'];
@@ -481,6 +507,7 @@ function renderEPSChart(earnings, calendar) {
     const beatLossPlugin = {
         id: 'beatLossLabels',
         afterDraw: (chart) => {
+            if (!chart.scales || !chart.scales.x || !chart.scales.y) return;
             const { ctx, scales: { x, y } } = chart;
             ctx.save();
             ctx.textAlign = 'center';
@@ -488,12 +515,26 @@ function renderEPSChart(earnings, calendar) {
 
             chartPoints.forEach((d, i) => {
                 if (d.isFuture) return;
+                // Treat 0 as valid number, only skip undefined/null
                 if (d.epsActual === undefined || d.epsActual === null) return;
 
                 const xPos = x.getPixelForValue(i);
+
+                // Safety check for y.bottom
+                if (!y || !y.bottom) return;
                 const yPos = y.bottom + 20;
 
-                const surprise = d.surprise !== undefined ? d.surprise : (d.epsActual - (d.epsEstimate || 0));
+                const actual = parseFloat(d.epsActual);
+                const est = d.epsEstimate ? parseFloat(d.epsEstimate) : 0;
+
+                // Use backend surprise if available, else calc
+                let surprise;
+                if (d.surprise !== undefined && d.surprise !== null) {
+                    surprise = parseFloat(d.surprise);
+                } else {
+                    surprise = actual - est;
+                }
+
                 const isBeat = (surprise >= 0);
 
                 // "Beat" / "Loss" text
@@ -511,14 +552,21 @@ function renderEPSChart(earnings, calendar) {
     const candlePlugin = {
         id: 'nextQuarterCandle',
         beforeDraw: (chart) => {
+            if (!chart.scales || !chart.scales.x || !chart.scales.y) return;
             const { ctx, scales: { x, y } } = chart;
             const nextIdx = chartPoints.findIndex(d => d.isFuture);
             if (nextIdx === -1) return;
 
             const d = chartPoints[nextIdx];
+            // Ensure high/low are numbers
+            const epsHigh = parseFloat(d.epsHigh);
+            const epsLow = parseFloat(d.epsLow);
+
+            if (isNaN(epsHigh) || isNaN(epsLow)) return;
+
             const xPos = x.getPixelForValue(nextIdx);
-            const yHigh = y.getPixelForValue(d.epsHigh);
-            const yLow = y.getPixelForValue(d.epsLow);
+            const yHigh = y.getPixelForValue(epsHigh);
+            const yLow = y.getPixelForValue(epsLow);
 
             ctx.save();
             ctx.beginPath();
@@ -548,7 +596,10 @@ function renderEPSChart(earnings, calendar) {
             datasets: [
                 {
                     label: 'Estimated',
-                    data: chartPoints.map(d => d.epsEstimate),
+                    data: chartPoints.map(d => {
+                        const val = d.epsEstimate;
+                        return (val !== undefined && val !== null) ? parseFloat(val) : null;
+                    }),
                     borderColor: (c) => chartPoints[c.dataIndex].isFuture ? '#fff' : '#6b7280',
                     backgroundColor: (c) => chartPoints[c.dataIndex].isFuture ? '#1e2433' : 'transparent',
                     borderWidth: 2,
@@ -558,12 +609,18 @@ function renderEPSChart(earnings, calendar) {
                 },
                 {
                     label: 'Actual',
-                    data: chartPoints.map(d => d.epsActual),
+                    data: chartPoints.map(d => {
+                        const val = d.epsActual;
+                        return (val !== undefined && val !== null) ? parseFloat(val) : null;
+                    }),
                     borderColor: 'transparent',
                     backgroundColor: (c) => {
                         const d = chartPoints[c.dataIndex];
                         if (!d || d.isFuture) return 'transparent';
-                        return (d.epsActual >= (d.epsEstimate || 0)) ? '#00c805' : '#ef4444';
+                        const actual = parseFloat(d.epsActual);
+                        const est = d.epsEstimate ? parseFloat(d.epsEstimate) : 0;
+                        if (isNaN(actual)) return 'transparent'; // Safety
+                        return (actual >= est) ? '#00c805' : '#ef4444';
                     },
                     pointStyle: 'circle',
                     pointRadius: 10,
@@ -590,7 +647,7 @@ function renderEPSChart(earnings, calendar) {
                     callbacks: {
                         label: (c) => {
                             const d = chartPoints[c.dataIndex];
-                            if (c.datasetIndex === 0) return `Est: ${d.epsEstimate}`;
+                            if (c.datasetIndex === 0 && d.epsEstimate !== undefined) return `Est: ${d.epsEstimate}`;
                             if (c.datasetIndex === 1 && d.epsActual !== undefined) return `Actual: ${d.epsActual}`;
                             return null;
                         }
