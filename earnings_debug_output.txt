@@ -1,4 +1,0 @@
-Result Type: <class 'list'>
-Result Length: 4
-First record keys: ['date', 'epsActual', 'epsEstimate', 'epsDifference', 'surprisePercent']
-First record: {'date': '2025-03-31', 'epsActual': 1.65, 'epsEstimate': 1.62253, 'epsDifference': 0.03, 'surprisePercent': 0.016900001}
