@@ -1,12 +1,13 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.middleware.proxy_fix import ProxyFix
-import requests
+from flask import Flask, jsonify, request # pyre-ignore[21]
+from flask_cors import CORS # pyre-ignore[21]
+from flask_limiter import Limiter # pyre-ignore[21]
+from flask_limiter.util import get_remote_address # pyre-ignore[21]
+from werkzeug.middleware.proxy_fix import ProxyFix # pyre-ignore[21]
+import requests # pyre-ignore[21]
 import os
-from dotenv import load_dotenv
-from api_client import StockDataService
+from dotenv import load_dotenv # pyre-ignore[21]
+from api_client import StockDataService # pyre-ignore[21]
+import typing
 
 # Load environment variables (Moved below imports but need to be robust)
 # Check multiple locations for .env
@@ -39,7 +40,7 @@ stock_service = StockDataService()
 RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY")
 
 try:
-    from firebase import db
+    from firebase import db # pyre-ignore[21]
 except Exception as e:
     print(f"Error initializing Firebase: {e}")
     db = None
@@ -151,12 +152,12 @@ def get_holdings():
         docs = holdings_ref.stream()
 
         
-        holdings_list = []
-        total_portfolio_value = 0
+        holdings_list: typing.List[typing.Dict[str, typing.Any]] = []
+        total_portfolio_value: float = 0.0
         
         for doc in docs:
-            raw_data = doc.to_dict()
-            data = {k.lower(): v for k, v in raw_data.items()}
+            raw_data = doc.to_dict() or {}
+            data: typing.Dict[str, typing.Any] = {k.lower(): v for k, v in raw_data.items()}
             ticker_symbol = data.get('company ticker', doc.id)
             
             try:
@@ -190,11 +191,11 @@ def get_holdings():
 
             # Calculate Position Value for Weight Calculation
             quantity = data.get('quantity', 0)
-            if quantity != "-" and current != "-":
+            if quantity is not None and quantity != "-" and current is not None and current != "-":
                 try:
-                    pos_value = float(quantity) * float(current)
-                    data['position_value'] = pos_value
-                    total_portfolio_value += pos_value
+                    pos_value_float = float(quantity) * float(current)
+                    data['position_value'] = pos_value_float
+                    total_portfolio_value = typing.cast(float, total_portfolio_value) + pos_value_float
                 except:
                     data['position_value'] = 0
             else:
@@ -206,8 +207,13 @@ def get_holdings():
         filtered_holdings = []
         for holding in holdings_list:
             # Calculate weight
-            if total_portfolio_value > 0 and holding.get('position_value', 0) > 0:
-                holding['weight'] = round((holding['position_value'] / total_portfolio_value) * 100, 2)
+            pos_val = holding.get('position_value', 0)
+            if typing.cast(float, total_portfolio_value) > 0 and isinstance(pos_val, (int, float)):
+                pos_val_float = float(pos_val)
+                if pos_val_float > 0:
+                    holding['weight'] = float(f"{(pos_val_float / typing.cast(float, total_portfolio_value)) * 100:.2f}")
+                else:
+                    holding['weight'] = 0
             else:
                 holding['weight'] = 0
 
@@ -228,7 +234,7 @@ def get_holdings():
 
         # 3. Calculate Portfolio History Chart Data
         # Collect symbols and weights for the chart service
-        chart_holdings = [{'symbol': h['symbol'], 'weight': h['weight']} for h in filtered_holdings if h['weight'] > 0]
+        chart_holdings = [{'symbol': h.get('symbol'), 'weight': h.get('weight')} for h in filtered_holdings if isinstance(h.get('weight'), (int, float)) and float(h.get('weight', 0) or 0) > 0]
         
         # Get period from request, default to 5d
         period = request.args.get('period', '5d')
@@ -265,12 +271,12 @@ def get_watchlist():
         watchlist_ref = db.collection('Watchlist')
         docs = watchlist_ref.stream()
         
-        watchlist_items = []
+        watchlist_items: typing.List[typing.Dict[str, typing.Any]] = []
         
         for doc in docs:
-            raw_data = doc.to_dict()
-            data = {k.lower(): v for k, v in raw_data.items()}
-            ticker_symbol = data.get('company ticker', doc.id)
+            raw_data = doc.to_dict() or {}
+            data: typing.Dict[str, typing.Any] = {k.lower(): v for k, v in raw_data.items()}
+            ticker_symbol = str(data.get('company ticker', doc.id))
             
             try:
                 quote = stock_service.get_stock_quote(ticker_symbol)
@@ -283,9 +289,6 @@ def get_watchlist():
                 else:
                     data['current_price'] = "-"
                     data['name'] = data.get('company name', ticker_symbol)
-                    data['week_change'] = 0
-                    data['forward_pe'] = "-"
-                    data['beta'] = "-"
             except Exception as e:
                 print(f"Error fetching quote for {ticker_symbol}: {e}")
                 data['current_price'] = "-"

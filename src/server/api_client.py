@@ -1,7 +1,8 @@
-import pandas as pd
-import yfinance as yf
+import pandas as pd # pyre-ignore[21]
+import yfinance as yf # pyre-ignore[21]
 import json
 from datetime import datetime
+import typing
 
 class StockDataService:
     def __init__(self):
@@ -300,7 +301,7 @@ class StockDataService:
             ticker = yf.Ticker(symbol)
             
             # Determine interval based on period
-            interval = "1d" # default
+            interval: str = "1d" # default
             if period == "1d":
                 interval = "5m" # More granular for 1 day
             elif period == "5d":
@@ -319,7 +320,8 @@ class StockDataService:
             for date, row in history.iterrows():
                 # Format date depending on interval
                 # If interval is minutes/hours, include time. Otherwise date only.
-                if "m" in interval or "h" in interval:
+                interval_str = str(interval)
+                if "m" in interval_str or "h" in interval_str:
                      date_str = date.strftime('%Y-%m-%d %H:%M')
                 else:
                      date_str = date.strftime('%Y-%m-%d')
@@ -555,9 +557,12 @@ class StockDataService:
             # 4. Convert to list of dicts
             portfolio_data = []
             for date, val in portfolio_df['total_return'].items():
+                float_val = float(val)
+                # Ensure float type for pyre matching
+                assert isinstance(float_val, float)
                 portfolio_data.append({
                     "date": date.strftime(date_format),
-                    "value": round(val, 2)
+                    "value": float(f"{float_val:.2f}")
                 })
 
             return portfolio_data
@@ -581,14 +586,14 @@ if __name__ == "__main__":
 
     # Test New Methods
     print("\n--- Fetching Earnings for NVDA ---")
-    earnings = service.get_earnings("NVDA")
+    earnings: typing.List[typing.Dict[str, typing.Any]] = service.get_earnings("NVDA") # pyre-ignore[9]
     print(f"Fetched {len(earnings)} earnings records")
-    if earnings: print(json.dumps(earnings[:2], indent=2))
+    if earnings: print(json.dumps(earnings[:2], indent=2)) # type: ignore
 
     print("\n--- Fetching Calendar for MSFT ---")
     calendar = service.get_calendar("MSFT")
     print(json.dumps(calendar, indent=2))
 
     print("\n--- Fetching Recommendations for GOOGL ---")
-    recs = service.get_recommendation("GOOGL")
-    if recs: print(json.dumps(recs[:2], indent=2))
+    recs: typing.List[typing.Dict[str, typing.Any]] = service.get_recommendation("GOOGL") # pyre-ignore[9]
+    if recs: print(json.dumps(recs[:2], indent=2)) # type: ignore
